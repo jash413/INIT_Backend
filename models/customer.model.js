@@ -103,7 +103,7 @@ Customer.remove = async (CUS_CODE) => {
 Customer.getAll = async () => {
   try {
     const res = await db.query("SELECT * FROM cus_mast");
-    console.log("Customers: ", res);
+    // console.log("Customers: ", res);
     return res;
   } catch (err) {
     console.error("Error retrieving customers:", err);

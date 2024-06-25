@@ -2,12 +2,13 @@ const express = require("express");
 const router = express.Router();
 const adminController = require("../controllers/admin.controller");
 const authToken = require("../middlewares/authenticateToken");
+const pagination = require("../middlewares/pagination");
 
 // Create a new Admin
 router.post("/", adminController.create);
 
 // Retrieve all Admins - Assuming this is protected
-router.get("/", authToken, adminController.findAll);
+router.get("/", authToken, pagination("usr_admin"), adminController.findAll);
 
 // Retrieve a single Admin by id - This could be protected or public based on your application's needs
 router.get("/:adId", authToken, adminController.findOne);

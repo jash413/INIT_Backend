@@ -3,6 +3,7 @@ const response = require("../utils/response");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const saltRounds = 10;
+const pagination = require("../middlewares/pagination");
 
 exports.Login = async (req, res) => {
   const { ad_email, ad_pass } = req.body;
@@ -26,7 +27,7 @@ exports.Login = async (req, res) => {
     }
 
     const token = jwt.sign({ id: admin.ad_id }, process.env.JWT_SECRET, {
-      expiresIn: process.env.JWT_EXPIRATION || 86400, // 24 hours or from env
+      expiresIn: 86400, // 24 hours 
     });
 
     res.json(
@@ -81,7 +82,11 @@ exports.findAll = async (req, res) => {
     res.json({
       success: true,
       message: "Admins retrieved successfully",
-      data: data,
+      data: paginatedData.data,
+      pagination: {
+        meta: paginatedData.meta,
+        links: paginatedData.links,
+      },
     });
   } catch (err) {
     res.status(500).json({
