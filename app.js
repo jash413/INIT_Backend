@@ -1,6 +1,10 @@
 const express = require("express");
 const bodyParser = require("body-parser");
+const cors = require("cors");
 const app = express();
+
+// Enable CORS
+app.use(cors());
 
 // Parse requests of content-type: application/json
 app.use(bodyParser.json());
