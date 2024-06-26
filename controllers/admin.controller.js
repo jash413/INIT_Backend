@@ -4,6 +4,7 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const saltRounds = 10;
 const pagination = require("../middlewares/pagination");
+const db = require("../utils/db");
 
 exports.Login = async (req, res) => {
   const { ad_email, ad_pass } = req.body;
@@ -82,11 +83,7 @@ exports.findAll = async (req, res) => {
     res.json({
       success: true,
       message: "Admins retrieved successfully",
-      data: paginatedData.data,
-      pagination: {
-        meta: paginatedData.meta,
-        links: paginatedData.links,
-      },
+      data: data,
     });
   } catch (err) {
     res.status(500).json({
@@ -100,17 +97,13 @@ exports.findAll = async (req, res) => {
 exports.findOne = async (req, res) => {
   try {
     const data = await Admin.findById(req.params.adId);
-    if (!data) {
-      res.status(404).json(response.error("Admin not found"));
-    } else {
-      res.json(response.success("Admin retrieved successfully", data));
-    }
+    res.json(response.success("Admin retrieved successfully", data));
   } catch (err) {
-    res
-      .status(500)
-      .json(
-        response.error("Error retrieving admin with id " + req.params.adId)
-      );
+    if (err.message === "Admin not found") {
+      res.status(404).json(response.error(err.message));
+    } else {
+      res.status(500).json(response.error("Error retrieving admin with id " + req.params.adId));
+    }
   }
 };
 
@@ -150,5 +143,49 @@ exports.delete = async (req, res) => {
       .json(
         response.error("Could not delete admin with id " + req.params.adId)
       );
+  }
+};
+exports.getAdminDetailsByToken = async (req, res) => {
+  try {
+    const { token } = req.body;
+
+    if (!token) {
+      return res.status(400).json(response.error("Token is required"));
+    }
+
+    // Verify the token
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET);
+    } catch (jwtError) {
+      console.error("JWT Verification Error:", jwtError);
+      return res.status(401).json(response.error("Invalid token"));
+    }
+
+    if (!decoded || !decoded.id) {
+      return res.status(400).json(response.error("Invalid token structure"));
+    }
+
+    // Find the admin in the database using the new method
+    const admin = await Admin.findByTokenId(decoded.id);
+
+    if (!admin) {
+      return res.status(404).json(response.error("Admin not found"));
+    }
+
+    // Return the admin details
+    return res.json(
+      response.success("Admin retrieved successfully", {
+        id: admin.ad_id,
+        name: admin.ad_name,
+        email: admin.ad_email,
+        type: admin.ad_type,
+      })
+    );
+  } catch (error) {
+    console.error("Unexpected Error:", error);
+    return res
+      .status(500)
+      .json(response.error("Error retrieving admin details"));
   }
 };

@@ -8,7 +8,7 @@ const pagination = require("../middlewares/pagination");
 router.post("/", adminController.create);
 
 // Retrieve all Admins - Assuming this is protected
-router.get("/", authToken, pagination("usr_admin"), adminController.findAll);
+router.get("/", authToken, adminController.findAll);
 
 // Retrieve a single Admin by id - This could be protected or public based on your application's needs
 router.get("/:adId", authToken, adminController.findOne);
@@ -21,5 +21,8 @@ router.delete("/:adId", authToken, adminController.delete);
 
 // Login API - Publicly accessible, does not require authToken middleware
 router.post("/login", adminController.Login);
+
+// Verify user and return their details using POST
+router.post("/verifyUser", adminController.getAdminDetailsByToken);
 
 module.exports = router;

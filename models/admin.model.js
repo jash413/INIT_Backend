@@ -80,16 +80,17 @@ Admin.remove = async (adId) => {
 
 
 // Find a single Admin with an id
-Admin.findById = async (req, res) => {
+Admin.findById = async (adId) => {
+  const query = "SELECT * FROM usr_admin WHERE ad_id = ?";
   try {
-    const data = await Admin.findById(req.params.adId);
-    if (!data) {
-      res.status(404).json(response.error("Admin not found"));
+    const [data] = await db.query(query, [adId]);
+    if (!data.length) {
+      throw new Error("Admin not found");
     } else {
-      res.json(response.success('Admin retrieved successfully', data));
+      return data[0]; 
     }
   } catch (err) {
-    res.status(500).json(response.error("Error retrieving admin with id " + req.params.adId));
+    throw err; 
   }
 };
 
@@ -105,6 +106,18 @@ Admin.getAll = async () => {
   }
 };
 
+Admin.findByTokenId = async (id) => {
+    try {
+      const [rows] = await db.query(
+        'SELECT ad_id, ad_name, ad_email, ad_type FROM usr_admin WHERE ad_id = ? AND ad_delete = 0',
+        [id]
+      );
+      return rows[0];
+    } catch (error) {
+      console.error('Database Error:', error);
+      throw error;
+    }
+  },
 
 
 
