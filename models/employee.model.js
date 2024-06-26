@@ -39,7 +39,7 @@ exports.findById = async (req, res) => {
 
 Employee.create = async (newEmployee) => {
   try {
-    const [res] = await db.query("INSERT INTO emp_mast SET ?", newEmployee);
+    const [res] = await db.query("INSERT INTO EMP_MAST SET ?", newEmployee);
     console.log("Created employee: ", { id: res.insertId, ...newEmployee });
     return { id: res.insertId, ...newEmployee };
   } catch (err) {
@@ -51,7 +51,7 @@ Employee.create = async (newEmployee) => {
 // Update Employee by id
 Employee.updateById = (empId, employee, result) => {
   db.query(
-    "UPDATE emp_mast SET emp_name = ?, emp_email = ?, emp_pass = ?, emp_position = ?, emp_salary = ? WHERE emp_id = ?",
+    "UPDATE EMP_MAST SET emp_name = ?, emp_email = ?, emp_pass = ?, emp_position = ?, emp_salary = ? WHERE emp_id = ?",
     [
       employee.emp_name,
       employee.emp_email,
@@ -78,7 +78,7 @@ Employee.updateById = (empId, employee, result) => {
 
 // Delete Employee by id
 Employee.remove = (empId, result) => {
-  db.query("DELETE FROM emp_mast WHERE emp_id = ?", empId, (err, res) => {
+  db.query("DELETE FROM EMP_MAST WHERE emp_id = ?", empId, (err, res) => {
     if (err) {
       console.error("Error deleting employee:", err);
       result(err, null);
@@ -95,7 +95,7 @@ Employee.remove = (empId, result) => {
 
 Employee.getAll = async () => {
   try {
-    const [res] = await db.query("SELECT * FROM emp_mast");
+    const [res] = await db.query("SELECT * FROM EMP_MAST");
     // console.log("Employees: ", res);
     return res;
   } catch (err) {

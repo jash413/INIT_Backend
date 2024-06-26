@@ -36,7 +36,7 @@ Customer.create = async (newCustomer) => {
     throw new Error("CUS_CODE is required");
   }
   try {
-    const [res] = await db.query("INSERT INTO cus_mast SET ?", newCustomer);
+    const [res] = await db.query("INSERT INTO CUS_MAST SET ?", newCustomer);
     console.log("Created customer: ", { id: res.insertId, ...newCustomer });
     return { id: res.insertId, ...newCustomer };
   } catch (err) {
@@ -63,7 +63,7 @@ exports.findById = async (req, res) => {
 Customer.updateById = async (CUS_CODE, customer) => {
   try {
     const res = await db.query(
-      "UPDATE cus_mast SET CUS_NAME = ?, CUS_MAIL = ?, CUS_PASS = ?, CUS_ADDR = ?, PHO_NMBR = ? WHERE CUS_CODE = ?",
+      "UPDATE CUS_MAST SET CUS_NAME = ?, CUS_MAIL = ?, CUS_PASS = ?, CUS_ADDR = ?, PHO_NMBR = ? WHERE CUS_CODE = ?",
       [
         customer.CUS_NAME,
         customer.CUS_MAIL,
@@ -87,7 +87,7 @@ Customer.updateById = async (CUS_CODE, customer) => {
 // Delete Customer by id
 Customer.remove = async (CUS_CODE) => {
   try {
-    const res = await db.query("DELETE FROM cus_mast WHERE CUS_CODE = ?", CUS_CODE);
+    const res = await db.query("DELETE FROM CUS_MAST WHERE CUS_CODE = ?", CUS_CODE);
     if (res.affectedRows == 0) {
       throw { message: "Customer not found" };
     }
@@ -102,7 +102,7 @@ Customer.remove = async (CUS_CODE) => {
 // Retrieve all Customers
 Customer.getAll = async () => {
   try {
-    const res = await db.query("SELECT * FROM cus_mast");
+    const res = await db.query("SELECT * FROM CUS_MAST");
     // console.log("Customers: ", res);
     return res;
   } catch (err) {

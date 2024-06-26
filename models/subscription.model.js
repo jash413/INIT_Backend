@@ -20,7 +20,7 @@ Subscription.create = async (newSubscription) => {
     throw new Error("SUB_CODE is required");
   }
   try {
-    const [res] = await db.query("INSERT INTO sub_mast SET ?", newSubscription);
+    const [res] = await db.query("INSERT INTO SUB_MAST SET ?", newSubscription);
     console.log("Created subscription: ", { id: res.insertId, ...newSubscription });
     return { id: res.insertId, ...newSubscription };
   } catch (err) {
@@ -32,7 +32,7 @@ Subscription.create = async (newSubscription) => {
 // Find Subscription by id
 Subscription.findById = (subId, result) => {
   db.query(
-    "SELECT * FROM sub_mast WHERE sub_id = ?",
+    "SELECT * FROM SUB_MAST WHERE sub_id = ?",
     subId,
     (err, res) => {
       if (err) {
@@ -53,7 +53,7 @@ Subscription.findById = (subId, result) => {
 // Update Subscription by id
 Subscription.updateById = (subId, subscription, result) => {
   db.query(
-    "UPDATE sub_mast SET sub_name = ?, sub_type = ?, sub_price = ?, sub_duration = ? WHERE sub_id = ?",
+    "UPDATE SUB_MAST SET sub_name = ?, sub_type = ?, sub_price = ?, sub_duration = ? WHERE sub_id = ?",
     [
       subscription.sub_name,
       subscription.sub_type,
@@ -80,7 +80,7 @@ Subscription.updateById = (subId, subscription, result) => {
 // Delete Subscription by id
 Subscription.remove = (subId, result) => {
   db.query(
-    "DELETE FROM sub_mast WHERE sub_id = ?",
+    "DELETE FROM SUB_MAST WHERE sub_id = ?",
     subId,
     (err, res) => {
       if (err) {
@@ -101,7 +101,7 @@ Subscription.remove = (subId, result) => {
 // Retrieve all Subscriptions
 Subscription.getAll = async () => {
   try {
-    const res = await db.query("SELECT * FROM sub_mast");
+    const res = await db.query("SELECT * FROM SUB_MAST");
     console.log("Subscriptions: ", res);
     return res;
   } catch (err) {
