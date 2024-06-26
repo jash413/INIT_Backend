@@ -1,8 +1,9 @@
-exports.success = (message, data, statusCode = 200) => {
+exports.success = (message, data,payload, statusCode = 200) => {
   return {
     status: "success",
     message: message,
     data: data,
+    payload : payload,
     statusCode: statusCode,
   };
 };

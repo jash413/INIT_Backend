@@ -121,14 +121,20 @@ Customer.remove = async (custId) => {
 };
 
 // Retrieve all Customers
-Customer.getAll = async () => {
+Customer.getAll = async (limit, offset) => {
   try {
-    const [rows] = await db.query("SELECT * FROM CUS_MAST");
-    return rows;
+    const [customers] = await db.query(
+      "SELECT * FROM CUS_MAST LIMIT ? OFFSET ?",
+      [limit, offset]
+    );
+    const [countResult] = await db.query(
+      "SELECT COUNT(*) as total FROM CUS_MAST"
+    );
+    const totalCount = countResult[0].total;
+    return [customers, totalCount];
   } catch (err) {
     console.error("Error retrieving customers:", err);
     throw err;
   }
 };
-
 module.exports = Customer;
