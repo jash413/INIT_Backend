@@ -85,26 +85,46 @@ Customer.updateById = async (CUS_CODE, customer) => {
 };
 
 // Delete Customer by id
-Customer.remove = async (CUS_CODE) => {
+Customer.remove = async (custId) => {
   try {
-    const res = await db.query("DELETE FROM CUS_MAST WHERE CUS_CODE = ?", CUS_CODE);
+    // Start a transaction
+    await db.beginTransaction();
+
+    // Attempt to delete related records from EMP_MAST. It's okay if no records are found.
+    // This operation will not fail if CUS_CODE does not exist in EMP_MAST, it will simply affect 0 rows.
+    await db.query("DELETE FROM EMP_MAST WHERE CUS_CODE = ?", [custId]);
+
+    // Attempt to delete related records from SUB_MAST. It's okay if no records are found.
+    // This operation will not fail if CUS_CODE does not exist in SUB_MAST, it will simply affect 0 rows.
+    await db.query("DELETE FROM SUB_MAST WHERE CUS_CODE = ?", [custId]);
+
+    // Finally, delete the customer from CUS_MAST
+    const [res] = await db.query("DELETE FROM CUS_MAST WHERE CUS_CODE = ?", [custId]);
+
+    // Check if the customer was successfully deleted
     if (res.affectedRows == 0) {
-      throw { message: "Customer not found" };
+      // No rows affected, meaning no customer was found with the given ID
+      throw new Error("Customer not found");
     }
-    console.log("Deleted customer with id: ", CUS_CODE);
-    return res;
+
+    // If everything went well, commit the transaction
+    await db.commit();
+
+    console.log("Deleted customer, subscription plans, and employee with id: ", custId);
+    return res; // Return the result to indicate success
   } catch (err) {
+    // If an error occurs, rollback any changes made during the transaction
+    await db.rollback();
     console.error("Error deleting customer:", err);
-    throw err;
+    throw err; // Rethrow the error to be caught by the calling function
   }
 };
 
 // Retrieve all Customers
 Customer.getAll = async () => {
   try {
-    const res = await db.query("SELECT * FROM CUS_MAST");
-    // console.log("Customers: ", res);
-    return res;
+    const [rows] = await db.query("SELECT * FROM CUS_MAST");
+    return rows;
   } catch (err) {
     console.error("Error retrieving customers:", err);
     throw err;

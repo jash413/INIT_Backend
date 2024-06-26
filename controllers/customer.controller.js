@@ -59,13 +59,10 @@ exports.findAll = async (req, res) => {
     const data = await Customer.getAll();
     res.json(response.success("Customers retrieved successfully", data));
   } catch (err) {
+    console.error("Error in findAll:", err);
     res
       .status(500)
-      .json(
-        response.error(
-          err.message || "Some error occurred while retrieving customers."
-        )
-      );
+      .json(response.error("An error occurred while retrieving customers."));
   }
 };
 
@@ -111,16 +108,19 @@ exports.update = (req, res) => {
 };
 
 // Delete a Customer with the specified id in the request
-exports.delete = (req, res) => {
-  Customer.remove(req.params.custId, (err, data) => {
-    if (err) {
-      if (err.message === "Customer not found") {
-        res.status(404).send({ message: "Customer not found" });
-      } else {
-        res.status(500).send({
-          message: "Could not delete customer with id " + req.params.custId,
-        });
-      }
-    } else res.send({ message: "Customer deleted successfully!" });
-  });
+exports.delete = async (req, res) => {
+  try {
+    const data = await Customer.remove(req.params.custId);
+    if (!data) {
+      res.status(404).json({ error: "Customer not found" });
+    } else {
+      res.json({ success: "Customer deleted successfully", data: {} });
+    }
+  } catch (err) {
+    res
+      .status(500)
+      .json({
+        error: "Could not delete customer with id " + req.params.custId,
+      });
+  }
 };
