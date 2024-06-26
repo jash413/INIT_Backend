@@ -57,7 +57,7 @@ exports.create = async (req, res) => {
 exports.findAll = async (req, res) => {
   try {
     const data = await Customer.getAll();
-    res.json(response.success("Customers retrieved successfully", data));
+    res.json(response.success("Customers retrieved successfully", data[0]));
   } catch (err) {
     res
       .status(500)
