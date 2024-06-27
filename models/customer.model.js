@@ -46,7 +46,7 @@ Customer.create = async (newCustomer) => {
 
     newCustomer.CUS_CODE = `${initials}${number.toString().padStart(4, '0')}`;
 
-    // Set other required fields
+    // Format dates for MySQL
     newCustomer.INS_DATE = now.toISOString().slice(0, 19).replace('T', ' ');
     newCustomer.DUE_DAYS = 30;
     newCustomer.EXP_DATE = expirationDate.toISOString().slice(0, 10);
@@ -61,7 +61,6 @@ Customer.create = async (newCustomer) => {
     throw err;
   }
 };
-
 // Retrieve Customer by id
 Customer.findById = async (custId) => {
   try {
@@ -93,8 +92,19 @@ Customer.updateById = async (CUS_CODE, updateData) => {
     
     for (const [key, value] of Object.entries(updateData)) {
       if (allowedFields.includes(key)) {
-        updateFields.push(`${key} = ?`);
-        updateValues.push(value);
+        if (key === 'INS_DATE') {
+          // Ensure INS_DATE is in the correct format
+          const date = new Date(value);
+          if (isNaN(date.getTime())) {
+            throw new Error("Invalid INS_DATE format");
+          }
+          updateFields.push(`${key} = ?`);
+          // Format date as 'YYYY-MM-DD HH:mm:ss'
+          updateValues.push(date.toISOString().slice(0, 19).replace('T', ' '));
+        } else {
+          updateFields.push(`${key} = ?`);
+          updateValues.push(value);
+        }
       }
     }
     
