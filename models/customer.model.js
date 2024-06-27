@@ -137,4 +137,35 @@ Customer.getAll = async (limit, offset) => {
     throw err;
   }
 };
+
+// Delete Customer by id
+Customer.remove = async (CUS_CODE) => {
+  const connection = await db.getConnection();
+  try {
+    await connection.beginTransaction();
+
+    // Delete related records from EMP_MAST
+    await connection.query("DELETE FROM EMP_MAST WHERE CUS_CODE = ?", [CUS_CODE]);
+
+    // Delete related records from SUB_MAST
+    await connection.query("DELETE FROM SUB_MAST WHERE CUS_CODE = ?", [CUS_CODE]);
+
+    // Delete the customer from CUS_MAST
+    const [result] = await connection.query("DELETE FROM CUS_MAST WHERE CUS_CODE = ?", [CUS_CODE]);
+
+    if (result.affectedRows === 0) {
+      throw new Error("Customer not found");
+    }
+
+    await connection.commit();
+    console.log("Deleted customer, subscription plans, and employee with CUS_CODE: ", CUS_CODE);
+    return result;
+  } catch (err) {
+    await connection.rollback();
+    console.error("Error deleting customer:", err);
+    throw err;
+  } finally {
+    connection.release();
+  }
+};
 module.exports = Customer;
