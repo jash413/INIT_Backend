@@ -20,8 +20,8 @@ exports.sendAdminOTP = async (req, res) => {
     // Generate a new 6-digit OTP
     const otp = crypto.randomInt(100000, 999999).toString();
 
-    // Construct the URL with the phone number, keeping [OTP] in the text
-    const url = `http://msg.jmdinfotek.in/api/mt/SendSMS?user=SSIFAS&password=123456&senderid=SSIFAS&channel=Trans&DCS=0&flashsms=0&number=${phoneNumber}&text=OTP+for+SAISUN+iFAS+ERP+App+is:+[OTP]&route=07`;
+    // Construct the URL with the phone number and new OTP
+    const url = `http://msg.jmdinfotek.in/api/mt/SendSMS?user=SSIFAS&password=123456&senderid=SSIFAS&channel=Trans&DCS=0&flashsms=0&number=${phoneNumber}&text=OTP+for+SAISUN+iFAS+ERP+App+is:+${otp}&route=07`;
 
     console.log("Sending request to:", url);
 
