@@ -138,28 +138,78 @@ exports.findOne = async (req, res) => {
       );
   }
 };
-// Update a Customer identified by the id in the request
-exports.update = (req, res) => {
-  if (!req.body) {
-    res.status(400).send({ message: "Content cannot be empty!" });
-    return;
+exports.update = async (req, res) => {
+  if (!req.body || Object.keys(req.body).length === 0) {
+    return res.status(400).send({ message: "Update data cannot be empty!" });
   }
 
-  Customer.updateById(
-    req.params.custId,
-    new Customer(req.body),
-    (err, data) => {
-      if (err) {
-        if (err.message === "Customer not found") {
-          res.status(404).send({ message: "Customer not found" });
-        } else {
-          res.status(500).send({
-            message: "Error updating customer with id " + req.params.custId,
-          });
-        }
-      } else res.send(data);
+  const allowedFields = [
+    "CUS_NAME",
+    "INS_DATE",
+    "DUE_DAYS",
+    "EXP_DATE",
+    "USR_NMBR",
+    "SYN_DATE",
+    "POS_SYNC",
+    "CUS_PASS",
+    "CUS_MAIL",
+    "LOG_INDT",
+    "CUS_MESG",
+    "MSG_EXDT",
+    "CON_PERS",
+    "CUS_ADDR",
+    "PHO_NMBR",
+    "CUS_REFB",
+    "GRP_CODE",
+    "INS_USER",
+    "BUS_CODE",
+    "CMP_VERS",
+    "client_id",
+    "client_secret",
+    "database_name",
+    "is_active",
+    "app_key",
+    "reg_type_id",
+  ];
+
+  const updateData = {};
+  let hasValidField = false;
+
+  for (const field of allowedFields) {
+    if (req.body[field] !== undefined) {
+      updateData[field] = req.body[field];
+      hasValidField = true;
     }
-  );
+  }
+
+  if (!hasValidField) {
+    return res
+      .status(400)
+      .send({
+        message:
+          "No valid fields to update. Allowed fields are: " +
+          allowedFields.join(", "),
+      });
+  }
+
+  try {
+    const updatedCustomer = await Customer.updateById(
+      req.params.custId,
+      updateData
+    );
+    res.send(updatedCustomer);
+  } catch (err) {
+    if (err.message === "Customer not found") {
+      res.status(404).send({ message: "Customer not found" });
+    } else if (err.message === "No valid fields to update") {
+      res.status(400).send({ message: "No valid fields to update" });
+    } else {
+      console.error("Error in update controller:", err);
+      res.status(500).send({
+        message: "Error updating customer with id " + req.params.custId,
+      });
+    }
+  }
 };
 
 // Delete a Customer with the specified id in the request

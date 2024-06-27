@@ -7,35 +7,52 @@ const Customer = function (customer) {
   this.DUE_DAYS = customer.DUE_DAYS;
   this.EXP_DATE = customer.EXP_DATE;
   this.USR_NMBR = customer.USR_NMBR;
-  this.SYN_DATE = customer.SYN_DATE;
-  this.POS_SYNC = customer.POS_SYNC;
   this.CUS_PASS = customer.CUS_PASS;
   this.CUS_MAIL = customer.CUS_MAIL;
-  this.LOG_INDT = customer.LOG_INDT;
   this.CUS_MESG = customer.CUS_MESG;
-  this.MSG_EXDT = customer.MSG_EXDT;
   this.CON_PERS = customer.CON_PERS;
   this.CUS_ADDR = customer.CUS_ADDR;
   this.PHO_NMBR = customer.PHO_NMBR;
   this.CUS_REFB = customer.CUS_REFB;
-  this.GRP_CODE = customer.GRP_CODE;
-  this.INS_USER = customer.INS_USER;
-  this.BUS_CODE = customer.BUS_CODE;
-  this.CMP_VERS = customer.CMP_VERS;
-  this.client_id = customer.client_id;
-  this.client_secret = customer.client_secret;
-  this.database_name = customer.database_name;
-  this.is_active = customer.is_active;
-  this.app_key = customer.app_key;
-  this.reg_type_id = customer.reg_type_id;
+  this.is_active = 1;
 };
 
 // Create a new Customer
 Customer.create = async (newCustomer) => {
-  if (!newCustomer.CUS_CODE) {
-    throw new Error("CUS_CODE is required");
+  if (!newCustomer.CUS_NAME) {
+    throw new Error("CUS_NAME is required");
   }
+
+  const now = new Date();
+  const expirationDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days from now
+
+  // Generate CUS_CODE
+  const nameParts = newCustomer.CUS_NAME.split(' ');
+  const initials = nameParts.map(part => part[0].toUpperCase()).join('');
+
   try {
+    // Find the highest number for the given initials
+    const [rows] = await db.query(
+      "SELECT CUS_CODE FROM CUS_MAST WHERE CUS_CODE LIKE ? ORDER BY CUS_CODE DESC LIMIT 1",
+      [`${initials}%`]
+    );
+
+    let number = 1;
+    if (rows.length > 0) {
+      const lastCode = rows[0].CUS_CODE;
+      const lastNumber = parseInt(lastCode.slice(-4));
+      number = lastNumber + 1;
+    }
+
+    newCustomer.CUS_CODE = `${initials}${number.toString().padStart(4, '0')}`;
+
+    // Set other required fields
+    newCustomer.INS_DATE = now.toISOString().slice(0, 19).replace('T', ' ');
+    newCustomer.DUE_DAYS = 30;
+    newCustomer.EXP_DATE = expirationDate.toISOString().slice(0, 10);
+    newCustomer.is_active = 1;
+
+    // Insert the new customer
     const [res] = await db.query("INSERT INTO CUS_MAST SET ?", newCustomer);
     console.log("Created customer: ", { id: res.insertId, ...newCustomer });
     return { id: res.insertId, ...newCustomer };
@@ -60,63 +77,46 @@ Customer.findById = async (custId) => {
 };
 
 // Update Customer by id
-Customer.updateById = async (CUS_CODE, customer) => {
+Customer.updateById = async (CUS_CODE, updateData) => {
+  const allowedFields = [
+    'CUS_NAME', 'INS_DATE', 'DUE_DAYS', 'EXP_DATE', 'USR_NMBR', 
+    'SYN_DATE', 'POS_SYNC', 'CUS_PASS', 'CUS_MAIL', 'LOG_INDT', 
+    'CUS_MESG', 'MSG_EXDT', 'CON_PERS', 'CUS_ADDR', 'PHO_NMBR', 
+    'CUS_REFB', 'GRP_CODE', 'INS_USER', 'BUS_CODE', 'CMP_VERS', 
+    'client_id', 'client_secret', 'database_name', 'is_active', 
+    'app_key', 'reg_type_id'
+  ];
+  
   try {
-    const res = await db.query(
-      "UPDATE CUS_MAST SET CUS_NAME = ?, CUS_MAIL = ?, CUS_PASS = ?, CUS_ADDR = ?, PHO_NMBR = ? WHERE CUS_CODE = ?",
-      [
-        customer.CUS_NAME,
-        customer.CUS_MAIL,
-        customer.CUS_PASS,
-        customer.CUS_ADDR,
-        customer.PHO_NMBR,
-        CUS_CODE,
-      ]
-    );
-    if (res.affectedRows == 0) {
-      throw { message: "Customer not found" };
+    let updateFields = [];
+    let updateValues = [];
+    
+    for (const [key, value] of Object.entries(updateData)) {
+      if (allowedFields.includes(key)) {
+        updateFields.push(`${key} = ?`);
+        updateValues.push(value);
+      }
     }
-    console.log("Updated customer: ", { id: CUS_CODE, ...customer });
-    return { id: CUS_CODE, ...customer };
+    
+    if (updateFields.length === 0) {
+      throw new Error("No valid fields to update");
+    }
+    
+    updateValues.push(CUS_CODE);
+    
+    const sql = `UPDATE CUS_MAST SET ${updateFields.join(', ')} WHERE CUS_CODE = ?`;
+
+    const [result] = await db.query(sql, updateValues);
+
+    if (result.affectedRows === 0) {
+      throw new Error("Customer not found");
+    }
+    
+    console.log("Updated customer: ", { CUS_CODE, ...updateData });
+    return { CUS_CODE, ...updateData };
   } catch (err) {
     console.error("Error updating customer:", err);
     throw err;
-  }
-};
-
-// Delete Customer by id
-Customer.remove = async (custId) => {
-  try {
-    // Start a transaction
-    await db.beginTransaction();
-
-    // Attempt to delete related records from EMP_MAST. It's okay if no records are found.
-    // This operation will not fail if CUS_CODE does not exist in EMP_MAST, it will simply affect 0 rows.
-    await db.query("DELETE FROM EMP_MAST WHERE CUS_CODE = ?", [custId]);
-
-    // Attempt to delete related records from SUB_MAST. It's okay if no records are found.
-    // This operation will not fail if CUS_CODE does not exist in SUB_MAST, it will simply affect 0 rows.
-    await db.query("DELETE FROM SUB_MAST WHERE CUS_CODE = ?", [custId]);
-
-    // Finally, delete the customer from CUS_MAST
-    const [res] = await db.query("DELETE FROM CUS_MAST WHERE CUS_CODE = ?", [custId]);
-
-    // Check if the customer was successfully deleted
-    if (res.affectedRows == 0) {
-      // No rows affected, meaning no customer was found with the given ID
-      throw new Error("Customer not found");
-    }
-
-    // If everything went well, commit the transaction
-    await db.commit();
-
-    console.log("Deleted customer, subscription plans, and employee with id: ", custId);
-    return res; // Return the result to indicate success
-  } catch (err) {
-    // If an error occurs, rollback any changes made during the transaction
-    await db.rollback();
-    console.error("Error deleting customer:", err);
-    throw err; // Rethrow the error to be caught by the calling function
   }
 };
 
