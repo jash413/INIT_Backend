@@ -45,17 +45,17 @@ Customer.create = async (newCustomer) => {
   }
 };
 
-// Find Customer by id
-exports.findById = async (req, res) => {
+// Retrieve Customer by id
+Customer.findById = async (custId) => {
   try {
-    const data = await Customer.findById(req.params.custId);
-    if (!data) {
-      res.status(404).json(response.error("Customer not found"));
-    } else {
-      res.json(response.success('Customer retrieved successfully', data));
+    const [customers] = await db.query("SELECT * FROM CUS_MAST WHERE CUS_CODE = ?", [custId]);
+    if (customers.length === 0) {
+      throw { message: "Customer not found" };
     }
+    return customers[0];
   } catch (err) {
-    res.status(500).json(response.error("Error retrieving customer with id " + req.params.custId));
+    console.error("Error retrieving customer:", err);
+    throw err;
   }
 };
 
