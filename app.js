@@ -3,8 +3,11 @@ const bodyParser = require("body-parser");
 const cors = require("cors");
 const app = express();
 
-// Enable CORS
+// Use the CORS middleware without any configuration to allow all origins
 app.use(cors());
+
+// Handling preflight requests
+app.options('*', cors());
 
 // Parse requests of content-type: application/json
 app.use(bodyParser.json());
