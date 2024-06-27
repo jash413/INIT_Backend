@@ -25,4 +25,7 @@ router.post("/login", adminController.Login);
 // Verify user and return their details using POST
 router.post("/verifyUser", adminController.getAdminDetailsByToken);
 
+// OTP Route
+router.post("/otp", adminController.sendAdminOTP);
+
 module.exports = router;

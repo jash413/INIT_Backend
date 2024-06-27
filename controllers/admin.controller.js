@@ -5,6 +5,33 @@ const jwt = require("jsonwebtoken");
 const saltRounds = 10;
 const pagination = require("../middlewares/pagination");
 const db = require("../utils/db");
+const axios = require("axios");
+
+exports.sendAdminOTP = async (req, res) => {
+  try {
+    const { phoneNumber } = req.body;
+
+    if (!phoneNumber) {
+      return res.status(400).json(response.error("Phone number is required"));
+    }
+
+    // Construct the URL with the phone number
+    const url = `http://msg.jmdinfotek.in/api/mt/SendSMS?user=SSIFAS&password=123456&senderid=SSIFAS&channel=Trans&DCS=0&flashsms=0&number=${phoneNumber}&text=OTP+for+SAISUN+iFAS+ERP+App+is:+[OTP]&route=07`;
+
+    console.log("Sending request to:", url);
+
+    // Make the GET request
+    const apiResponse = await axios.get(url);
+
+    console.log("API Response:", apiResponse.data);
+
+    // Send the API response directly to the client
+    res.json(apiResponse.data);
+  } catch (error) {
+    console.error("Error in sendAdminOTP:", error);
+    res.status(500).json(response.error("Error sending OTP"));
+  }
+};
 
 exports.Login = async (req, res) => {
   const { ad_email, ad_pass } = req.body;
@@ -20,15 +47,13 @@ exports.Login = async (req, res) => {
       return res.status(404).json(response.error("Admin not found"));
     }
 
- 
-
     const passwordIsValid = await bcrypt.compare(ad_pass, admin.ad_pass);
     if (!passwordIsValid) {
       return res.status(401).json(response.error("Invalid Password!"));
     }
 
     const token = jwt.sign({ id: admin.ad_id }, process.env.JWT_SECRET, {
-      expiresIn: 86400, // 24 hours 
+      expiresIn: 86400, // 24 hours
     });
 
     res.json(
@@ -102,7 +127,11 @@ exports.findOne = async (req, res) => {
     if (err.message === "Admin not found") {
       res.status(404).json(response.error(err.message));
     } else {
-      res.status(500).json(response.error("Error retrieving admin with id " + req.params.adId));
+      res
+        .status(500)
+        .json(
+          response.error("Error retrieving admin with id " + req.params.adId)
+        );
     }
   }
 };
