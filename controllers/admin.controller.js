@@ -7,16 +7,21 @@ const pagination = require("../middlewares/pagination");
 const db = require("../utils/db");
 const axios = require("axios");
 
+const crypto = require("crypto");
+
 exports.sendAdminOTP = async (req, res) => {
   try {
     const { phoneNumber } = req.body;
 
     if (!phoneNumber) {
-      return res.status(400).json(response.error("Phone number is required"));
+      return res.status(400).json({ error: "Phone number is required" });
     }
 
-    // Construct the URL with the phone number
-    const url = `http://msg.jmdinfotek.in/api/mt/SendSMS?user=SSIFAS&password=123456&senderid=SSIFAS&channel=Trans&DCS=0&flashsms=0&number=${phoneNumber}&text=OTP+for+SAISUN+iFAS+ERP+App+is:+[OTP]&route=07`;
+    // Generate a new 6-digit OTP
+    const otp = crypto.randomInt(100000, 999999).toString();
+
+    // Construct the URL with the phone number and new OTP
+    const url = `http://msg.jmdinfotek.in/api/mt/SendSMS?user=SSIFAS&password=123456&senderid=SSIFAS&channel=Trans&DCS=0&flashsms=0&number=${phoneNumber}&text=OTP+for+SAISUN+iFAS+ERP+App+is:+${otp}&route=07`;
 
     console.log("Sending request to:", url);
 
@@ -25,11 +30,14 @@ exports.sendAdminOTP = async (req, res) => {
 
     console.log("API Response:", apiResponse.data);
 
-    // Send the API response directly to the client
-    res.json(apiResponse.data);
+    // Send the API response along with the generated OTP
+    res.json({
+      ...apiResponse.data,
+      generatedOTP: otp,
+    });
   } catch (error) {
     console.error("Error in sendAdminOTP:", error);
-    res.status(500).json(response.error("Error sending OTP"));
+    res.status(500).json({ error: "Error sending OTP" });
   }
 };
 
