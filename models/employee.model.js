@@ -93,11 +93,17 @@ Employee.remove = (empId, result) => {
   });
 };
 
-Employee.getAll = async () => {
+Employee.getAll = async (limit, offset) => {
   try {
-    const [res] = await db.query("SELECT * FROM EMP_MAST");
-    // console.log("Employees: ", res);
-    return res;
+    const [employees] = await db.query(
+      "SELECT * FROM EMP_MAST LIMIT ? OFFSET ?",
+      [limit, offset]
+    );
+    const [countResult] = await db.query(
+      "SELECT COUNT(*) as total FROM EMP_MAST"
+    );
+    const totalCount = countResult[0].total;
+    return [employees, totalCount];
   } catch (err) {
     console.error("Error retrieving employees:", err);
     throw err;

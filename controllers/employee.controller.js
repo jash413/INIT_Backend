@@ -43,16 +43,69 @@ exports.create = async (req, res) => {
 // Retrieve all Employees from the database
 exports.findAll = async (req, res) => {
   try {
-    const data = await Employee.getAll();
-    res.json(response.success("Employees retrieved successfully", data));
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+
+    const [employees, totalCount] = await Employee.getAll(limit, offset);
+
+    const totalPages = Math.ceil(totalCount / limit);
+
+    // Initialize links array
+    let links = [];
+
+    // Generate links for each page
+    for (let i = 1; i <= totalPages; i++) {
+      links.push({
+        url: `/?page=${i}`,
+        label: `${i}`,
+        active: i === page,
+        page: i,
+      });
+    }
+
+    // Optionally, add Previous and Next links
+    if (page > 1) {
+      links.unshift({
+        url: `/?page=${page - 1}`,
+        label: "&laquo; Previous",
+        active: false,
+        page: page - 1,
+      });
+    }
+    if (page < totalPages) {
+      links.push({
+        url: `/?page=${page + 1}`,
+        label: "Next &raquo;",
+        active: false,
+        page: page + 1,
+      });
+    }
+
+    const paginationData = {
+      page: page,
+      first_page_url: `/?page=1`,
+      last_page: totalPages,
+      next_page_url: page < totalPages ? `/?page=${page + 1}` : null,
+      prev_page_url: page > 1 ? `/?page=${page - 1}` : null,
+      items_per_page: limit,
+      from: offset + 1,
+      to: offset + employees.length,
+      total: totalCount,
+      links, // Include the updated links array in the pagination data
+    };
+
+
+    res.json(
+      response.success("Employees retrieved successfully", employees, {
+        pagination: paginationData,
+      })
+    );
   } catch (err) {
+    console.error("Error in findAllEmployees:", err);
     res
       .status(500)
-      .json(
-        response.error(
-          err.message || "Some error occurred while retrieving employees."
-        )
-      );
+      .json(response.error("An error occurred while retrieving employees."));
   }
 };
 

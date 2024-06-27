@@ -99,11 +99,17 @@ Subscription.remove = (subId, result) => {
 };
 
 // Retrieve all Subscriptions
-Subscription.getAll = async () => {
+Subscription.getAll = async (limit, offset) => {
   try {
-    const res = await db.query("SELECT * FROM SUB_MAST");
-    console.log("Subscriptions: ", res);
-    return res;
+    const [subscriptions] = await db.query(
+      "SELECT * FROM SUB_MAST LIMIT ? OFFSET ?",
+      [limit, offset]
+    );
+    const [countResult] = await db.query(
+      "SELECT COUNT(*) as total FROM SUB_MAST"
+    );
+    const totalCount = countResult[0].total;
+    return [subscriptions, totalCount];
   } catch (err) {
     console.error("Error retrieving subscriptions:", err);
     throw err;

@@ -34,22 +34,70 @@ exports.create = async (req, res) => {
       );
   }
 };
-// Retrieve all Subscriptions
+// Retrieve all Subscriptions from the database
 exports.findAll = async (req, res) => {
   try {
-    const data = await Subscription.getAll();
-    res.json(response.success("Subscriptions retrieved successfully", data));
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+
+    // Assuming SUB_MAST has a similar getAll method
+    const [subscriptions, totalCount] = await Subscription.getAll(limit, offset);
+
+    const totalPages = Math.ceil(totalCount / limit);
+
+    let links = [];
+    for (let i = 1; i <= totalPages; i++) {
+      links.push({
+        url: `/?page=${i}`,
+        label: `${i}`,
+        active: i === page,
+        page: i,
+      });
+    }
+
+    if (page > 1) {
+      links.unshift({
+        url: `/?page=${page - 1}`,
+        label: "&laquo; Previous",
+        active: false,
+        page: page - 1,
+      });
+    }
+    if (page < totalPages) {
+      links.push({
+        url: `/?page=${page + 1}`,
+        label: "Next &raquo;",
+        active: false,
+        page: page + 1,
+      });
+    }
+
+    const paginationData = {
+      page: page,
+      first_page_url: `/?page=1`,
+      last_page: totalPages,
+      next_page_url: page < totalPages ? `/?page=${page + 1}` : null,
+      prev_page_url: page > 1 ? `/?page=${page - 1}` : null,
+      items_per_page: limit,
+      from: offset + 1,
+      to: offset + subscriptions.length,
+      total: totalCount,
+      links,
+    };
+
+    res.json(
+      response.success("Subscriptions retrieved successfully", subscriptions, {
+        pagination: paginationData,
+      })
+    );
   } catch (err) {
+    console.error("Error in findAllSubscriptions:", err);
     res
       .status(500)
-      .json(
-        response.error(
-          err.message || "Some error occurred while retrieving subscriptions."
-        )
-      );
+      .json(response.error("An error occurred while retrieving subscriptions."));
   }
 };
-
 
 // Find a single Subscription with an id
 exports.findOne = (req, res) => {
