@@ -138,6 +138,7 @@ exports.findOne = async (req, res) => {
       );
   }
 };
+
 exports.update = async (req, res) => {
   if (!req.body || Object.keys(req.body).length === 0) {
     return res.status(400).send({ message: "Update data cannot be empty!" });

@@ -78,50 +78,79 @@ Customer.findById = async (custId) => {
 // Update Customer by id
 Customer.updateById = async (CUS_CODE, updateData) => {
   const allowedFields = [
-    'CUS_NAME', 'INS_DATE', 'DUE_DAYS', 'EXP_DATE', 'USR_NMBR', 
-    'SYN_DATE', 'POS_SYNC', 'CUS_PASS', 'CUS_MAIL', 'LOG_INDT', 
-    'CUS_MESG', 'MSG_EXDT', 'CON_PERS', 'CUS_ADDR', 'PHO_NMBR', 
-    'CUS_REFB', 'GRP_CODE', 'INS_USER', 'BUS_CODE', 'CMP_VERS', 
-    'client_id', 'client_secret', 'database_name', 'is_active', 
-    'app_key', 'reg_type_id'
+    "CUS_NAME",
+    "INS_DATE",
+    "DUE_DAYS",
+    "EXP_DATE",
+    "USR_NMBR",
+    "SYN_DATE",
+    "POS_SYNC",
+    "CUS_PASS",
+    "CUS_MAIL",
+    "LOG_INDT",
+    "CUS_MESG",
+    "MSG_EXDT",
+    "CON_PERS",
+    "CUS_ADDR",
+    "PHO_NMBR",
+    "CUS_REFB",
+    "GRP_CODE",
+    "INS_USER",
+    "BUS_CODE",
+    "CMP_VERS",
+    "client_id",
+    "client_secret",
+    "database_name",
+    "is_active",
+    "app_key",
+    "reg_type_id",
   ];
-  
+
   try {
     let updateFields = [];
     let updateValues = [];
-    
+
     for (const [key, value] of Object.entries(updateData)) {
       if (allowedFields.includes(key)) {
-        if (key === 'INS_DATE') {
-          // Ensure INS_DATE is in the correct format
+        if (
+          [
+            "INS_DATE",
+            "SYN_DATE",
+            "POS_SYNC",
+            "LOG_INDT",
+            "EXP_DATE",
+            "MSG_EXDT",
+          ].includes(key)
+        ) {
+          // Ensure date fields are in the correct format
           const date = new Date(value);
           if (isNaN(date.getTime())) {
-            throw new Error("Invalid INS_DATE format");
+            throw new Error(`Invalid ${key} format`);
           }
           updateFields.push(`${key} = ?`);
-          // Format date as 'YYYY-MM-DD HH:mm:ss'
-          updateValues.push(date.toISOString().slice(0, 19).replace('T', ' '));
+          updateValues.push(date.toISOString().slice(0, 19).replace("T", " "));
         } else {
           updateFields.push(`${key} = ?`);
           updateValues.push(value);
         }
       }
     }
-    
+
     if (updateFields.length === 0) {
       throw new Error("No valid fields to update");
     }
-    
-    updateValues.push(CUS_CODE);
-    
-    const sql = `UPDATE CUS_MAST SET ${updateFields.join(', ')} WHERE CUS_CODE = ?`;
 
+    updateValues.push(CUS_CODE);
+
+    const sql = `UPDATE CUS_MAST SET ${updateFields.join(
+      ", "
+    )} WHERE CUS_CODE = ?`;
     const [result] = await db.query(sql, updateValues);
 
     if (result.affectedRows === 0) {
       throw new Error("Customer not found");
     }
-    
+
     console.log("Updated customer: ", { CUS_CODE, ...updateData });
     return { CUS_CODE, ...updateData };
   } catch (err) {
@@ -129,6 +158,7 @@ Customer.updateById = async (CUS_CODE, updateData) => {
     throw err;
   }
 };
+
 
 // Retrieve all Customers
 Customer.getAll = async (limit, offset) => {
