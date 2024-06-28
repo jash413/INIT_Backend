@@ -9,4 +9,5 @@ router.get("/:custId", authToken, customerController.findOne); // Find a custome
 router.put("/:custId", authToken, customerController.update); // Update a customer by id
 router.delete("/:custId", authToken, customerController.delete); // Delete a customer by id
 
+
 module.exports = router;

@@ -14,6 +14,7 @@ const Subscription = function (subscription) {
   this.ORD_REQD = subscription.ORD_REQD;
 };
 
+
 // Create a new Subscription
 Subscription.create = async (newSubscription) => {
   if (!newSubscription.SUB_CODE) {
@@ -110,6 +111,19 @@ Subscription.getAll = async (limit, offset) => {
     );
     const totalCount = countResult[0].total;
     return [subscriptions, totalCount];
+  } catch (err) {
+    console.error("Error retrieving subscriptions:", err);
+    throw err;
+  }
+};
+
+Subscription.GetPlan = async () => {
+  console.log("GetPlan function called");
+  try {
+    console.log("Executing database query");
+    const subscriptions = await db.query("SELECT * FROM SUB_PLAN");
+    console.log("Query executed, retrieved subscriptions:", subscriptions);
+    return subscriptions;
   } catch (err) {
     console.error("Error retrieving subscriptions:", err);
     throw err;
