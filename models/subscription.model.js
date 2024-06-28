@@ -117,17 +117,5 @@ Subscription.getAll = async (limit, offset) => {
   }
 };
 
-Subscription.GetPlan = async () => {
-  console.log("GetPlan function called");
-  try {
-    console.log("Executing database query");
-    const subscriptions = await db.query("SELECT * FROM SUB_PLAN");
-    console.log("Query executed, retrieved subscriptions:", subscriptions);
-    return subscriptions;
-  } catch (err) {
-    console.error("Error retrieving subscriptions:", err);
-    throw err;
-  }
-};
 
 module.exports = Subscription;
