@@ -1,6 +1,7 @@
 const Customer = require("../models/customer.model");
 const moment = require("moment");
 const response = require("../utils/response");
+
 // Create and Save a new Customer
 exports.create = async (req, res) => {
   try {
@@ -9,18 +10,20 @@ exports.create = async (req, res) => {
       return;
     }
 
+    const formatMomentDate = (date) => date ? moment(date).format("YYYY-MM-DD HH:mm:ss") : null;
+
     const customer = new Customer({
       CUS_CODE: req.body.CUS_CODE,
       CUS_NAME: req.body.CUS_NAME,
-      INS_DATE: moment(req.body.INS_DATE).format("YYYY-MM-DD HH:mm:ss"),
+      INS_DATE: formatMomentDate(req.body.INS_DATE),
       DUE_DAYS: req.body.DUE_DAYS,
-      EXP_DATE: req.body.EXP_DATE,
+      EXP_DATE: req.body.EXP_DATE, // Assuming EXP_DATE and MSG_EXDT are not formatted because they might already be in correct format or not date fields
       USR_NMBR: req.body.USR_NMBR,
-      SYN_DATE: moment(req.body.SYN_DATE).format("YYYY-MM-DD HH:mm:ss"),
-      POS_SYNC: moment(req.body.POS_SYNC).format("YYYY-MM-DD HH:mm:ss"),
+      SYN_DATE: null,
+      POS_SYNC: formatMomentDate(req.body.POS_SYNC),
       CUS_PASS: req.body.CUS_PASS,
       CUS_MAIL: req.body.CUS_MAIL,
-      LOG_INDT: moment(req.body.LOG_INDT).format("YYYY-MM-DD HH:mm:ss"),
+      LOG_INDT: formatMomentDate(req.body.LOG_INDT),
       CUS_MESG: req.body.CUS_MESG,
       MSG_EXDT: req.body.MSG_EXDT,
       CON_PERS: req.body.CON_PERS,
@@ -38,9 +41,11 @@ exports.create = async (req, res) => {
       app_key: req.body.app_key,
       reg_type_id: req.body.reg_type_id,
     });
+    console.log("Creating customer with SYN_DATE:", customer.SYN_DATE);
 
     const data = await Customer.create(customer);
     res.json(response.success("Customer created successfully", data));
+    console.log("SYN_DATE", data.SYN_DATE);
   } catch (err) {
     res
       .status(500)
@@ -146,11 +151,11 @@ exports.update = async (req, res) => {
 
   const allowedFields = [
     "CUS_NAME",
-    "INS_DATE",
+    
     "DUE_DAYS",
-    "EXP_DATE",
+    
     "USR_NMBR",
-    "SYN_DATE",
+  
     "POS_SYNC",
     "CUS_PASS",
     "CUS_MAIL",
@@ -199,6 +204,7 @@ exports.update = async (req, res) => {
       updateData
     );
     res.send(updatedCustomer);
+    console.log("syn_date", updatedCustomer.SYN_DATE);
   } catch (err) {
     if (err.message === "Customer not found") {
       res.status(404).send({ message: "Customer not found" });
