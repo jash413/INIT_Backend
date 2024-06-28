@@ -159,7 +159,6 @@ exports.update = async (req, res) => {
     "POS_SYNC",
     "CUS_PASS",
     "CUS_MAIL",
-    "LOG_INDT",
     "CUS_MESG",
     "MSG_EXDT",
     "CON_PERS",
