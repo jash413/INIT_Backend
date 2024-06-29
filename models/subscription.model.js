@@ -17,10 +17,22 @@ const Subscription = function (subscription) {
 
 // Create a new Subscription
 Subscription.create = async (newSubscription) => {
-  if (!newSubscription.SUB_CODE) {
-    throw new Error("SUB_CODE is required");
-  }
   try {
+    // Step 1: Query the database for the highest SUB_CODE
+    const [highestCode] = await db.query("SELECT SUB_CODE FROM SUB_MAST ORDER BY SUB_CODE DESC LIMIT 1");
+    let nextCode = 1;
+    if (highestCode.length > 0) {
+      // Step 2: Extract the numeric part and increment
+      const currentMaxNum = parseInt(highestCode[0].SUB_CODE.replace('SUB', '')) + 1;
+      nextCode = currentMaxNum;
+    }
+    // Format the new SUB_CODE with leading zeros
+    const newSUB_CODE = `SUB${nextCode.toString().padStart(3, '0')}`;
+    // Step 3: Assign the new SUB_CODE
+    newSubscription.SUB_CODE = newSUB_CODE;
+
+    // Remove the check for SUB_CODE since it's now auto-generated
+    // Step 4: Insert the newSubscription into the database
     const [res] = await db.query("INSERT INTO SUB_MAST SET ?", newSubscription);
     console.log("Created subscription: ", { id: res.insertId, ...newSubscription });
     return { id: res.insertId, ...newSubscription };
@@ -31,25 +43,22 @@ Subscription.create = async (newSubscription) => {
 };
 
 // Find Subscription by id
-Subscription.findById = (subId, result) => {
-  db.query(
-    "SELECT * FROM SUB_MAST WHERE SUB_CODE = ?",
-    subId,
-    (err, res) => {
-      if (err) {
-        console.error("Error finding subscription by id:", err);
-        result(err, null);
-        return;
-      }
-      if (res.length) {
-        
-        result(null, res[0]);
-        return;
-      }
-      result({ message: "Subscription not found" }, null);
+Subscription.findById = async (subId) => {
+  try {
+    const [subscriptions] = await db.query(
+      "SELECT * FROM SUB_MAST WHERE SUB_CODE = ?",
+      [subId]
+    );
+    if (subscriptions.length === 0) {
+      throw new Error("Subscription not found");
     }
-  );
+    return subscriptions[0];
+  } catch (err) {
+    console.error("Error retrieving subscription:", err);
+    throw err;
+  }
 };
+
 
 // Update Subscription by id
 Subscription.updateByCode = async (SUB_CODE, updateData) => {
@@ -126,7 +135,6 @@ Subscription.updateByCode = async (SUB_CODE, updateData) => {
     throw err;
   }
 };
-
 
 
 // Delete Subscription by id

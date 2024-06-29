@@ -100,18 +100,38 @@ exports.findAll = async (req, res) => {
 };
 
 // Find a single Subscription with an id
-exports.findOne = (req, res) => {
-  Subscription.findById(req.params.subId, (err, data) => {
-    if (err) {
-      if (err.message === "Subscription not found") {
-        res.status(404).send({ message: "Subscription not found" });
-      } else {
-        res.status(500).send({
-          message: "Error retrieving subscription with id " + req.params.subId,
-        });
-      }
-    } else res.send(data);
-  });
+exports.findOne = async (req, res) => {
+
+  try {
+    const data = await Subscription.findById(req.params.subId);
+    console.log("Subscription retrieved successfully:", data);
+    return res
+      .status(200)
+      .send(
+        response.success("Subscription retrieved successfully", data)
+      );
+  } catch (err) {
+    if (err.message === "Subscription not found") {
+      console.error("Subscription not found with id:", req.params.subId);
+      return res
+        .status(404)
+        .send(response.notFound("Subscription not found"));
+    } else {
+      console.error(
+        "Error retrieving subscription with id",
+        req.params.subId,
+        ":",
+        err
+      );
+      return res
+        .status(500)
+        .send(
+          response.error(
+            "Error retrieving subscription with id " + req.params.subId
+          )
+        );
+    }
+  }
 };
 
 // Update a Subscription identified by the id in the request
