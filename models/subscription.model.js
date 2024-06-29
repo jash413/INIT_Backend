@@ -33,7 +33,7 @@ Subscription.create = async (newSubscription) => {
 // Find Subscription by id
 Subscription.findById = (subId, result) => {
   db.query(
-    "SELECT * FROM SUB_MAST WHERE sub_id = ?",
+    "SELECT * FROM SUB_MAST WHERE SUB_CODE = ?",
     subId,
     (err, res) => {
       if (err) {
@@ -42,7 +42,7 @@ Subscription.findById = (subId, result) => {
         return;
       }
       if (res.length) {
-        console.log("Found subscription: ", res[0]);
+        
         result(null, res[0]);
         return;
       }
@@ -52,51 +52,99 @@ Subscription.findById = (subId, result) => {
 };
 
 // Update Subscription by id
-Subscription.updateById = (subId, subscription, result) => {
-  db.query(
-    "UPDATE SUB_MAST SET sub_name = ?, sub_type = ?, sub_price = ?, sub_duration = ? WHERE sub_id = ?",
-    [
-      subscription.sub_name,
-      subscription.sub_type,
-      subscription.sub_price,
-      subscription.sub_duration,
-      subId,
-    ],
-    (err, res) => {
-      if (err) {
-        console.error("Error updating subscription:", err);
-        result(err, null);
-        return;
+Subscription.updateByCode = async (SUB_CODE, updateData) => {
+  const allowedFields = [
+    "CUS_CODE",
+    "PLA_CODE",
+    "SUB_STDT",
+    "SUB_ENDT",
+    "LIC_USER",
+    "SUB_PDAT",
+    "SUB_ORDN",
+    "status",
+    "ORD_REQD",
+  ];
+
+  const dateFields = ["SUB_STDT", "SUB_ENDT"];
+
+  try {
+    let updateFields = [];
+    let updateValues = [];
+
+    for (const [key, value] of Object.entries(updateData)) {
+      if (allowedFields.includes(key)) {
+        if (dateFields.includes(key) && value !== null) {
+          // Handle date fields
+          const date = new Date(value);
+          if (isNaN(date.getTime())) {
+            throw new Error(`Invalid ${key} format`);
+          }
+          updateFields.push(`${key} = ?`);
+          updateValues.push(date.toISOString().slice(0, 10)); // Format as YYYY-MM-DD
+        } else if (key === "LIC_USER") {
+          // Ensure LIC_USER is a smallint
+          const licUser = parseInt(value, 10);
+          if (isNaN(licUser) || licUser < 0 || licUser > 32767) {
+            throw new Error("Invalid LIC_USER value");
+          }
+          updateFields.push(`${key} = ?`);
+          updateValues.push(licUser);
+        } else if (key === "status") {
+          // Ensure status is 0 or 1
+          const status = parseInt(value, 10);
+          if (status !== 0 && status !== 1) {
+            throw new Error("Invalid status value");
+          }
+          updateFields.push(`${key} = ?`);
+          updateValues.push(status);
+        } else {
+          updateFields.push(`${key} = ?`);
+          updateValues.push(value);
+        }
       }
-      if (res.affectedRows == 0) {
-        result({ message: "Subscription not found" }, null);
-        return;
-      }
-      console.log("Updated subscription: ", { id: subId, ...subscription });
-      result(null, { id: subId, ...subscription });
     }
-  );
+
+    if (updateFields.length === 0) {
+      throw new Error("No valid fields to update");
+    }
+
+    updateValues.push(SUB_CODE);
+
+    const sql = `UPDATE SUB_MAST SET ${updateFields.join(
+      ", "
+    )} WHERE SUB_CODE = ?`;
+    const [result] = await db.query(sql, updateValues);
+
+    if (result.affectedRows === 0) {
+      throw new Error("Subscription not found");
+    }
+
+    console.log("Updated subscription: ", { SUB_CODE, ...updateData });
+    return { SUB_CODE, ...updateData };
+  } catch (err) {
+    console.error("Error updating subscription:", err);
+    throw err;
+  }
 };
 
+
+
 // Delete Subscription by id
-Subscription.remove = (subId, result) => {
-  db.query(
-    "DELETE FROM SUB_MAST WHERE sub_id = ?",
-    subId,
-    (err, res) => {
-      if (err) {
-        console.error("Error deleting subscription:", err);
-        result(err, null);
-        return;
-      }
-      if (res.affectedRows == 0) {
-        result({ message: "Subscription not found" }, null);
-        return;
-      }
-      // console.log("Deleted subscription with id: ", subId);
-      result(null, res);
+Subscription.remove = async (subId) => {
+  try {
+    const [result] = await db.query("DELETE FROM SUB_MAST WHERE SUB_CODE = ?", [
+      subId,
+    ]);
+
+    if (result.affectedRows === 0) {
+      throw new Error("Subscription not found");
     }
-  );
+
+    return {result,deletedSubID : subId};
+  } catch (err) {
+    console.error("Error deleting subscription:", err);
+    throw err; // Re-throw the error to be handled by the caller
+  }
 };
 
 // Retrieve all Subscriptions

@@ -10,7 +10,8 @@ exports.create = async (req, res) => {
       return;
     }
 
-    const formatMomentDate = (date) => date ? moment(date).format("YYYY-MM-DD HH:mm:ss") : null;
+    const formatMomentDate = (date) =>
+      date ? moment(date).format("YYYY-MM-DD HH:mm:ss") : null;
 
     const customer = new Customer({
       CUS_CODE: req.body.CUS_CODE,
@@ -41,11 +42,11 @@ exports.create = async (req, res) => {
       app_key: req.body.app_key,
       reg_type_id: req.body.reg_type_id,
     });
-    console.log("Creating customer with SYN_DATE:", customer.SYN_DATE);
+
 
     const data = await Customer.create(customer);
     res.json(response.success("Customer created successfully", data));
-    console.log("SYN_DATE", data.SYN_DATE);
+    
   } catch (err) {
     res
       .status(500)
@@ -112,7 +113,6 @@ exports.findAll = async (req, res) => {
       links, // Include the updated links array in the pagination data
     };
 
-
     res.json(
       response.success("Customers retrieved successfully", customers, {
         pagination: paginationData,
@@ -151,11 +151,8 @@ exports.update = async (req, res) => {
 
   const allowedFields = [
     "CUS_NAME",
-    
     "DUE_DAYS",
-    
     "USR_NMBR",
-  
     "POS_SYNC",
     "CUS_PASS",
     "CUS_MAIL",
@@ -188,13 +185,11 @@ exports.update = async (req, res) => {
   }
 
   if (!hasValidField) {
-    return res
-      .status(400)
-      .send({
-        message:
-          "No valid fields to update. Allowed fields are: " +
-          allowedFields.join(", "),
-      });
+    return res.status(400).send({
+      message:
+        "No valid fields to update. Allowed fields are: " +
+        allowedFields.join(", "),
+    });
   }
 
   try {
@@ -203,7 +198,6 @@ exports.update = async (req, res) => {
       updateData
     );
     res.send(updatedCustomer);
-    console.log("syn_date", updatedCustomer.SYN_DATE);
   } catch (err) {
     if (err.message === "Customer not found") {
       res.status(404).send({ message: "Customer not found" });
@@ -233,4 +227,3 @@ exports.delete = async (req, res) => {
     });
   }
 };
-

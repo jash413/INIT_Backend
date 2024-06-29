@@ -115,42 +115,60 @@ exports.findOne = (req, res) => {
 };
 
 // Update a Subscription identified by the id in the request
-exports.update = (req, res) => {
-  if (!req.body) {
-    res.status(400).send({ message: "Content cannot be empty!" });
-    return;
+exports.update = async (req, res) => {
+
+
+  if (!req.body || Object.keys(req.body).length === 0) {
+    console.log("Empty request body");
+    return res
+      .status(400)
+      .send(response.badRequest("Content can not be empty!"));
   }
 
-  Subscription.updateById(
-    req.params.subId,
-    new Subscription(req.body),
-    (err, data) => {
-      if (err) {
-        if (err.message === "Subscription not found") {
-          res.status(404).send({ message: "Subscription not found" });
-        } else {
-          res.status(500).send({
-            message: "Error updating subscription with id " + req.params.subId,
-          });
-        }
-      } else res.send(data);
+  const subCode = req.params.subCode;
+
+  try {
+    const data = await Subscription.updateByCode(subCode, req.body);
+
+    return res
+      .status(200)
+      .send(response.success("Subscription updated successfully", data));
+  } catch (err) {
+    console.error("Error in updateByCode:", err);
+    if (err.message === "Subscription not found") {
+      return res
+        .status(404)
+        .send(
+          response.notFound(
+            `Subscription not found with code ${subCode}.`
+          )
+        );
+    } else {
+      return res
+        .status(500)
+        .send(
+          response.error(
+            `Error updating Subscription with code ${subCode}: ${err.message}`
+          )
+        );
     }
-  );
+  }
 };
 
 // Delete a Subscription with the specified id in the request
-exports.delete = (req, res) => {
-  Subscription.remove(req.params.subId, (err, data) => {
-    if (err) {
-      if (err.message === "Subscription not found") {
-        res.status(404).send({ message: "Subscription not found" });
-      } else {
-        res.status(500).send({
-          message: "Could not delete subscription with id " + req.params.subId,
-        });
-      }
-    } else res.send({ message: "Subscription deleted successfully!" });
-  });
+exports.delete = async (req, res) => {
+  try {
+    await Subscription.remove(req.params.subId);
+    res.send({ message: "Subscription deleted successfully!" });
+  } catch (err) {
+    if (err.message === "Subscription not found") {
+      res.status(404).send({ message: "Subscription not found" });
+    } else {
+      console.error("Error in delete controller:", err);
+      res.status(500).send({
+        message: `Could not delete subscription with id ${req.params.subId}`,
+      });
+    }
+  }
 };
-
 
