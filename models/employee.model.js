@@ -93,16 +93,57 @@ Employee.remove = (empId, result) => {
   });
 };
 
-Employee.getAll = async (limit, offset) => {
+Employee.getAll = async (limit, offset, sort, order, search) => {
   try {
-    const [employees] = await db.query(
-      "SELECT * FROM EMP_MAST LIMIT ? OFFSET ?",
-      [limit, offset]
-    );
+    let query = "SELECT * FROM EMP_MAST";
+    let countQuery = "SELECT COUNT(*) as total FROM EMP_MAST";
+    let params = [];
+
+    // Updated search to include additional fields and corrected column names
+    if (search) {
+      query +=
+        " WHERE CONCAT_WS('', EMP_CODE, EMP_NAME, EMP_MAIL, MOB_NMBR, EMP_IMEI, EMP_ACTV, SUB_CODE, USR_TYPE, STATUS) LIKE ?";
+      countQuery +=
+        " WHERE CONCAT_WS('', EMP_CODE, EMP_NAME, EMP_MAIL, MOB_NMBR, EMP_IMEI, EMP_ACTV, SUB_CODE, USR_TYPE, STATUS) LIKE ?";
+      params.push(`%${search}%`);
+    }
+
+    // Updated sort validation to include all sortable fields
+    if (
+      sort &&
+      [
+        "EMP_CODE",
+        "EMP_NAME",
+        "EMP_MAIL",
+        "MOB_NMBR",
+        "EMP_IMEI",
+        "EMP_ACTV",
+        "SYN_DATE",
+        "SUB_CODE",
+        "USR_TYPE",
+        "REGDATE",
+        "SUB_STDT",
+        "SUB_ENDT",
+        "STATUS"
+      ].includes(sort.toUpperCase())
+    ) {
+      query += ` ORDER BY ${sort} ${
+        order.toUpperCase() === "DESC" ? "DESC" : "ASC"
+      }`;
+    } else {
+      query += " ORDER BY EMP_CODE ASC"; // default sorting
+    }
+
+    query += " LIMIT ? OFFSET ?";
+    params.push(parseInt(limit), parseInt(offset));
+
+    const [employees] = await db.query(query, params);
     const [countResult] = await db.query(
-      "SELECT COUNT(*) as total FROM EMP_MAST"
+      countQuery,
+      search ? [`%${search}%`] : []
     );
     const totalCount = countResult[0].total;
+
     return [employees, totalCount];
   } catch (err) {
     console.error("Error retrieving employees:", err);

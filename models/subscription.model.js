@@ -156,16 +156,53 @@ Subscription.remove = async (subId) => {
 };
 
 // Retrieve all Subscriptions
-Subscription.getAll = async (limit, offset) => {
+Subscription.getAll = async (limit, offset, sort, order, search) => {
   try {
-    const [subscriptions] = await db.query(
-      "SELECT * FROM SUB_MAST LIMIT ? OFFSET ?",
-      [limit, offset]
-    );
+    let query = "SELECT * FROM SUB_MAST";
+    let countQuery = "SELECT COUNT(*) as total FROM SUB_MAST";
+    let params = [];
+
+    // Updated search to include additional fields
+    if (search) {
+      query +=
+        " WHERE CONCAT_WS('', SUB_CODE, CUS_CODE, PLA_CODE, SUB_STDT, SUB_ENDT, LIC_USER, SUB_PDAT, SUB_ORDN, ORD_REQD) LIKE ?";
+      countQuery +=
+        " WHERE CONCAT_WS('', SUB_CODE, CUS_CODE, PLA_CODE, SUB_STDT, SUB_ENDT, LIC_USER, SUB_PDAT, SUB_ORDN, ORD_REQD) LIKE ?";
+      params.push(`%${search}%`);
+    }
+
+    // Updated sort validation to include all sortable fields
+    if (
+      sort &&
+      [
+        "SUB_CODE",
+        "CUS_CODE",
+        "PLA_CODE",
+        "SUB_STDT",
+        "SUB_ENDT",
+        "LIC_USER",
+        "SUB_PDAT",
+        "SUB_ORDN",
+        "ORD_REQD",
+      ].includes(sort.toUpperCase())
+    ) {
+      query += ` ORDER BY ${sort} ${
+        order.toUpperCase() === "DESC" ? "DESC" : "ASC"
+      }`;
+    } else {
+      query += " ORDER BY SUB_CODE ASC"; // default sorting
+    }
+
+    query += " LIMIT ? OFFSET ?";
+    params.push(parseInt(limit), parseInt(offset));
+
+    const [subscriptions] = await db.query(query, params);
     const [countResult] = await db.query(
-      "SELECT COUNT(*) as total FROM SUB_MAST"
+      countQuery,
+      search ? [`%${search}%`] : []
     );
     const totalCount = countResult[0].total;
+
     return [subscriptions, totalCount];
   } catch (err) {
     console.error("Error retrieving subscriptions:", err);
