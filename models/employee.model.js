@@ -20,22 +20,22 @@ const Employee = function (employee) {
 };
 
 
-exports.findById = async (req, res) => {
-  try {
-    const data = await Employee.findById(req.params.empId);
-    if (!data) {
-      res.status(404).json(response.error("Employee not found"));
-    } else {
-      res.json(response.success("Employee retrieved successfully", data));
-    }
-  } catch (err) {
-    res
-      .status(500)
-      .json(
-        response.error("Error retrieving employee with id " + req.params.empId)
+Employee.findByMultipleCriteria = async (searchId) => {
+    try {
+      const [employees] = await db.query(
+        `SELECT * FROM EMP_MAST 
+         WHERE EMP_CODE = ? OR CUS_CODE = ? OR SUB_CODE = ?`,
+        [searchId, searchId, searchId]
       );
+      if (employees.length === 0) {
+        throw new Error("Employee not found");
+      }
+      return employees; // Return all matching employees
+    } catch (err) {
+      console.error("Error retrieving employee(s):", err);
+      throw err;
+    }
   }
-};
 
 Employee.create = async (newEmployee) => {
   try {

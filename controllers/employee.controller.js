@@ -110,19 +110,31 @@ exports.findAll = async (req, res) => {
 };
 
 // Find a single Employee with an id
+
 exports.findOne = async (req, res) => {
   try {
-    const data = await Employee.findById(req.params.empId);
-    if (!data) {
-      res.status(404).json(response.error("Employee not found"));
-    } else {
-      res.json(response.success("Employee retrieved successfully", data));
+    const data = await Employee.findByMultipleCriteria(req.params.empId);
+    if (!data || data.length === 0) {
+      console.error("Employee not found with id:", req.params.empId);
+      return res.status(404).send(response.notFound("Employee not found"));
     }
+    console.log("Employee(s) retrieved successfully:", data);
+    return res
+      .status(200)
+      .send(response.success("Employee(s) retrieved successfully", data));
   } catch (err) {
-    res
+    console.error(
+      "Error retrieving employee(s) with id",
+      req.params.empId,
+      ":",
+      err
+    );
+    return res
       .status(500)
-      .json(
-        response.error("Error retrieving employee with id " + req.params.empId)
+      .send(
+        response.error(
+          "Error retrieving employee(s) with id " + req.params.empId
+        )
       );
   }
 };

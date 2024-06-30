@@ -46,8 +46,8 @@ Subscription.create = async (newSubscription) => {
 Subscription.findById = async (subId) => {
   try {
     const [subscriptions] = await db.query(
-      "SELECT * FROM SUB_MAST WHERE SUB_CODE = ?",
-      [subId]
+      "SELECT * FROM SUB_MAST WHERE SUB_CODE = ? OR CUS_CODE = ?",
+      [subId,subId]
     );
     if (subscriptions.length === 0) {
       throw new Error("Subscription not found");
