@@ -171,17 +171,12 @@ exports.update = async (req, res) => {
 // Delete an Employee with the specified id in the request
 exports.delete = async (req, res) => {
   try {
-    const data = await Employee.remove(req.params.empId);
-    if (!data) {
-      res.status(404).json(response.error("Employee not found"));
-    } else {
-      res.json(response.success("Employee deleted successfully", {}));
-    }
+    const empId = req.params.empId;
+    console.log("Attempting to delete employee with id: ", empId);
+    await Employee.remove(empId);
+    res.send({ message: "Employee deleted successfully" });
   } catch (err) {
-    res
-      .status(500)
-      .json(
-        response.error("Could not delete employee with id " + req.params.empId)
-      );
+    console.error("Error in delete operation: ", err.message);
+    res.status(500).send({ message: err.message });
   }
 };
