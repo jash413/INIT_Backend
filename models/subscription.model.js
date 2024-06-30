@@ -47,14 +47,14 @@ Subscription.findById = async (subId) => {
   try {
     const [subscriptions] = await db.query(
       "SELECT * FROM SUB_MAST WHERE SUB_CODE = ? OR CUS_CODE = ?",
-      [subId,subId]
+      [subId, subId]
     );
     if (subscriptions.length === 0) {
       throw new Error("Subscription not found");
     }
-    return subscriptions[0];
+    return subscriptions; // Return the entire array of subscriptions
   } catch (err) {
-    console.error("Error retrieving subscription:", err);
+    console.error("Error retrieving subscriptions:", err);
     throw err;
   }
 };
