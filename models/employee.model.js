@@ -39,6 +39,20 @@ Employee.findByMultipleCriteria = async (searchId) => {
 
 Employee.create = async (newEmployee) => {
   try {
+    // Step 1: Fetch the last EMP_CODE
+    const [lastEmp] = await db.query("SELECT EMP_CODE FROM EMP_MAST ORDER BY EMP_CODE DESC LIMIT 1");
+    let nextEmpCode = 'E001'; // Default if no employees exist
+
+    if (lastEmp.length > 0) {
+      const lastEmpCode = lastEmp[0].EMP_CODE;
+      const numericPart = parseInt(lastEmpCode.substring(1)) + 1; // Extract numeric part and increment
+      nextEmpCode = `E${numericPart.toString().padStart(3, '0')}`; // Generate next EMP_CODE
+    }
+
+    // Step 2: Generate the next EMP_CODE and add it to newEmployee object
+    newEmployee.EMP_CODE = nextEmpCode;
+
+    // Step 3: Insert the new employee with the generated EMP_CODE
     const [res] = await db.query("INSERT INTO EMP_MAST SET ?", newEmployee);
     console.log("Created employee: ", { id: res.insertId, ...newEmployee });
     return { id: res.insertId, ...newEmployee };
