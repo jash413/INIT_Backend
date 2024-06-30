@@ -49,49 +49,47 @@ Employee.create = async (newEmployee) => {
 };
 
 // Update Employee by id
-Employee.updateById = (empId, employee, result) => {
-  db.query(
-    "UPDATE EMP_MAST SET emp_name = ?, emp_email = ?, emp_pass = ?, emp_position = ?, emp_salary = ? WHERE emp_id = ?",
-    [
-      employee.emp_name,
-      employee.emp_email,
-      employee.emp_pass,
-      employee.emp_position,
-      employee.emp_salary,
-      empId,
-    ],
-    (err, res) => {
-      if (err) {
-        console.error("Error updating employee:", err);
-        result(err, null);
-        return;
-      }
-      if (res.affectedRows == 0) {
-        result({ message: "Employee not found" }, null);
-        return;
-      }
-      console.log("Updated employee: ", { id: empId, ...employee });
-      result(null, { id: empId, ...employee });
+Employee.updateById = async (empId, employee) => {
+  try {
+    const [result] = await db.query(
+      "UPDATE EMP_MAST SET EMP_NAME = ?, EMP_MAIL = ?, EMP_PASS = ?, EMP_POSITION = ?, EMP_SALARY = ? WHERE EMP_CODE = ?",
+      [
+        employee.EMP_NAME,
+        employee.EMP_MAIL,
+        employee.EMP_PASS,
+        employee.EMP_POSITION,
+        employee.EMP_SALARY,
+        empId,
+      ]
+    );
+
+    if (result.affectedRows === 0) {
+      throw new Error("Employee not found");
     }
-  );
+
+    console.log("Updated employee: ", { id: empId, ...employee });
+    return { id: empId, ...employee };
+  } catch (err) {
+    console.error("Error updating employee:", err);
+    throw err;
+  }
 };
 
+
 // Delete Employee by id
-Employee.remove = (empId, result) => {
-  db.query("DELETE FROM EMP_MAST WHERE emp_id = ?", empId, (err, res) => {
-    if (err) {
+Employee.remove = async (empId) => {
+    try {
+      const [res] = await db.query("DELETE FROM EMP_MAST WHERE EMP_CODE = ?", empId);
+      if (res.affectedRows == 0) {
+        throw new Error("Employee not found");
+      }
+      console.log("Deleted employee with id: ", empId);
+      return res;
+    } catch (err) {
       console.error("Error deleting employee:", err);
-      result(err, null);
-      return;
+      throw err;
     }
-    if (res.affectedRows == 0) {
-      result({ message: "Employee not found" }, null);
-      return;
-    }
-    console.log("Deleted employee with id: ", empId);
-    result(null, res);
-  });
-};
+  }
 
 Employee.getAll = async (limit, offset, sort, order, search) => {
   try {

@@ -143,36 +143,45 @@ exports.findOne = async (req, res) => {
 };
 
 // Update an Employee identified by the id in the request
-exports.update = (req, res) => {
-  if (!req.body) {
-    res.status(400).send({ message: "Content cannot be empty!" });
-    return;
-  }
+exports.update = async (req, res) => {
+  try {
+    if (!req.body) {
+      return res.status(400).json(response.error("Content cannot be empty!"));
+    }
 
-  Employee.updateById(req.params.empId, new Employee(req.body), (err, data) => {
-    if (err) {
-      if (err.message === "Employee not found") {
-        res.status(404).send({ message: "Employee not found" });
-      } else {
-        res.status(500).send({
-          message: "Error updating employee with id " + req.params.empId,
-        });
-      }
-    } else res.send(data);
-  });
+    const updatedEmployee = new Employee(req.body);
+    const data = await Employee.updateById(req.params.empId, updatedEmployee);
+
+    if (!data) {
+      return res.status(404).json(response.notFound("Employee not found"));
+    }
+
+    res.json(response.success("Employee updated successfully", data));
+  } catch (err) {
+    console.error("Error updating employee with id " + req.params.empId, err);
+    res
+      .status(500)
+      .json(
+        response.error("Error updating employee with id " + req.params.empId)
+      );
+  }
 };
 
+
 // Delete an Employee with the specified id in the request
-exports.delete = (req, res) => {
-  Employee.remove(req.params.empId, (err, data) => {
-    if (err) {
-      if (err.message === "Employee not found") {
-        res.status(404).send({ message: "Employee not found" });
-      } else {
-        res.status(500).send({
-          message: "Could not delete employee with id " + req.params.empId,
-        });
-      }
-    } else res.send({ message: "Employee deleted successfully!" });
-  });
+exports.delete = async (req, res) => {
+  try {
+    const data = await Employee.remove(req.params.empId);
+    if (!data) {
+      res.status(404).json(response.error("Employee not found"));
+    } else {
+      res.json(response.success("Employee deleted successfully", {}));
+    }
+  } catch (err) {
+    res
+      .status(500)
+      .json(
+        response.error("Could not delete employee with id " + req.params.empId)
+      );
+  }
 };
