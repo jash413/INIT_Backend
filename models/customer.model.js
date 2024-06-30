@@ -27,8 +27,8 @@ Customer.create = async (newCustomer) => {
   const expirationDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days from now
 
   // Generate CUS_CODE
-  const nameParts = newCustomer.CUS_NAME.split(' ');
-  const initials = nameParts.map(part => part[0].toUpperCase()).join('');
+  const nameParts = newCustomer.CUS_NAME.split(" ");
+  const initials = nameParts.map((part) => part[0].toUpperCase()).join("");
 
   try {
     // Find the highest number for the given initials
@@ -44,10 +44,10 @@ Customer.create = async (newCustomer) => {
       number = lastNumber + 1;
     }
 
-    newCustomer.CUS_CODE = `${initials}${number.toString().padStart(4, '0')}`;
+    newCustomer.CUS_CODE = `${initials}${number.toString().padStart(4, "0")}`;
 
     // Format dates for MySQL
-    newCustomer.INS_DATE = now.toISOString().slice(0, 19).replace('T', ' ');
+    newCustomer.INS_DATE = now.toISOString().slice(0, 19).replace("T", " ");
     newCustomer.DUE_DAYS = 30;
     newCustomer.EXP_DATE = expirationDate.toISOString().slice(0, 10);
     newCustomer.is_active = 1;
@@ -64,7 +64,10 @@ Customer.create = async (newCustomer) => {
 // Retrieve Customer by id
 Customer.findById = async (custId) => {
   try {
-    const [customers] = await db.query("SELECT * FROM CUS_MAST WHERE CUS_CODE = ?", [custId]);
+    const [customers] = await db.query(
+      "SELECT * FROM CUS_MAST WHERE CUS_CODE = ?",
+      [custId]
+    );
     if (customers.length === 0) {
       throw { message: "Customer not found" };
     }
@@ -159,18 +162,49 @@ Customer.updateById = async (CUS_CODE, updateData) => {
   }
 };
 
-
 // Retrieve all Customers
-Customer.getAll = async (limit, offset) => {
+Customer.getAll = async (limit, offset, sort, order, search) => {
   try {
-    const [customers] = await db.query(
-      "SELECT * FROM CUS_MAST LIMIT ? OFFSET ?",
-      [limit, offset]
-    );
+    let query = "SELECT * FROM CUS_MAST";
+    let countQuery = "SELECT COUNT(*) as total FROM CUS_MAST";
+    let params = [];
+
+    if (search) {
+      query +=
+        " WHERE CONCAT_WS('', CUS_CODE, CUS_NAME, CUS_MAIL, PHO_NMBR, CUS_ADDR) LIKE ?";
+      countQuery +=
+        " WHERE CONCAT_WS('', CUS_CODE, CUS_NAME, CUS_MAIL, PHO_NMBR, CUS_ADDR) LIKE ?";
+      params.push(`%${search}%`);
+    }
+
+    if (
+      sort &&
+      [
+        "CUS_CODE",
+        "CUS_NAME",
+        "INS_DATE",
+        "EXP_DATE",
+        "CUS_MAIL",
+        "PHO_NMBR",
+      ].includes(sort.toUpperCase())
+    ) {
+      query += ` ORDER BY ${sort} ${
+        order.toUpperCase() === "DESC" ? "DESC" : "ASC"
+      }`;
+    } else {
+      query += " ORDER BY CUS_CODE ASC"; // default sorting
+    }
+
+    query += " LIMIT ? OFFSET ?";
+    params.push(parseInt(limit), parseInt(offset));
+
+    const [customers] = await db.query(query, params);
     const [countResult] = await db.query(
-      "SELECT COUNT(*) as total FROM CUS_MAST"
+      countQuery,
+      search ? [`%${search}%`] : []
     );
     const totalCount = countResult[0].total;
+
     return [customers, totalCount];
   } catch (err) {
     console.error("Error retrieving customers:", err);
@@ -185,20 +219,30 @@ Customer.remove = async (CUS_CODE) => {
     await connection.beginTransaction();
 
     // Delete related records from EMP_MAST
-    await connection.query("DELETE FROM EMP_MAST WHERE CUS_CODE = ?", [CUS_CODE]);
+    await connection.query("DELETE FROM EMP_MAST WHERE CUS_CODE = ?", [
+      CUS_CODE,
+    ]);
 
     // Delete related records from SUB_MAST
-    await connection.query("DELETE FROM SUB_MAST WHERE CUS_CODE = ?", [CUS_CODE]);
+    await connection.query("DELETE FROM SUB_MAST WHERE CUS_CODE = ?", [
+      CUS_CODE,
+    ]);
 
     // Delete the customer from CUS_MAST
-    const [result] = await connection.query("DELETE FROM CUS_MAST WHERE CUS_CODE = ?", [CUS_CODE]);
+    const [result] = await connection.query(
+      "DELETE FROM CUS_MAST WHERE CUS_CODE = ?",
+      [CUS_CODE]
+    );
 
     if (result.affectedRows === 0) {
       throw new Error("Customer not found");
     }
 
     await connection.commit();
-    console.log("Deleted customer, subscription plans, and employee with CUS_CODE: ", CUS_CODE);
+    console.log(
+      "Deleted customer, subscription plans, and employee with CUS_CODE: ",
+      CUS_CODE
+    );
     return result;
   } catch (err) {
     await connection.rollback();

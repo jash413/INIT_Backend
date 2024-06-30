@@ -62,30 +62,36 @@ exports.create = async (req, res) => {
 exports.findAll = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
+    const limit = parseInt(req.query.items_per_page) || 10;
     const offset = (page - 1) * limit;
+    const sort = req.query.sort || "CUS_CODE";
+    const order = req.query.order || "asc";
+    const search = req.query.search || "";
 
-    const [customers, totalCount] = await Customer.getAll(limit, offset);
-
+    const [customers, totalCount] = await Customer.getAll(
+      limit,
+      offset,
+      sort,
+      order,
+      search
+    );
     const totalPages = Math.ceil(totalCount / limit);
 
-    // Initialize links array
     let links = [];
-
-    // Generate links for each page
     for (let i = 1; i <= totalPages; i++) {
       links.push({
-        url: `/?page=${i}`,
+        url: `/api/customers?page=${i}&items_per_page=${limit}&sort=${sort}&order=${order}&search=${search}`,
         label: `${i}`,
         active: i === page,
         page: i,
       });
     }
 
-    // Optionally, add Previous and Next links
     if (page > 1) {
       links.unshift({
-        url: `/?page=${page - 1}`,
+        url: `/api/customers?page=${
+          page - 1
+        }&items_per_page=${limit}&sort=${sort}&order=${order}&search=${search}`,
         label: "&laquo; Previous",
         active: false,
         page: page - 1,
@@ -93,7 +99,9 @@ exports.findAll = async (req, res) => {
     }
     if (page < totalPages) {
       links.push({
-        url: `/?page=${page + 1}`,
+        url: `/api/customers?page=${
+          page + 1
+        }&items_per_page=${limit}&sort=${sort}&order=${order}&search=${search}`,
         label: "Next &raquo;",
         active: false,
         page: page + 1,
@@ -102,15 +110,25 @@ exports.findAll = async (req, res) => {
 
     const paginationData = {
       page: page,
-      first_page_url: `/?page=1`,
+      first_page_url: `/api/customers?page=1&items_per_page=${limit}&sort=${sort}&order=${order}&search=${search}`,
       last_page: totalPages,
-      next_page_url: page < totalPages ? `/?page=${page + 1}` : null,
-      prev_page_url: page > 1 ? `/?page=${page - 1}` : null,
+      next_page_url:
+        page < totalPages
+          ? `/api/customers?page=${
+              page + 1
+            }&items_per_page=${limit}&sort=${sort}&order=${order}&search=${search}`
+          : null,
+      prev_page_url:
+        page > 1
+          ? `/api/customers?page=${
+              page - 1
+            }&items_per_page=${limit}&sort=${sort}&order=${order}&search=${search}`
+          : null,
       items_per_page: limit,
       from: offset + 1,
       to: offset + customers.length,
       total: totalCount,
-      links, // Include the updated links array in the pagination data
+      links,
     };
 
     res.json(
@@ -125,6 +143,7 @@ exports.findAll = async (req, res) => {
       .json(response.error("An error occurred while retrieving customers."));
   }
 };
+
 
 // Find a single Customer with an id
 exports.findOne = async (req, res) => {
