@@ -20,23 +20,37 @@ const Employee = function (employee) {
 };
 
 
-Employee.findByMultipleCriteria = async (searchId) => {
-    try {
-      const [employees] = await db.query(
-        `SELECT * FROM EMP_MAST 
-         WHERE EMP_CODE = ? OR CUS_CODE = ? OR SUB_CODE = ?`,
-        [searchId, searchId, searchId]
-      );
-      if (employees.length === 0) {
-        throw new Error("Employee not found");
-      }
-      // If only one employee is found, return that employee as an object instead of an array
-      return employees.length === 1 ? employees[0] : employees; // Return single object or all matching employees
-    } catch (err) {
-      console.error("Error retrieving employee(s):", err);
-      throw err;
+exports.findOne = async (req, res) => {
+  try {
+    const data = await Employee.findByMultipleCriteria(req.params.empId);
+    console.log("Employee(s) retrieved successfully:", data);
+
+    // Check if data is an array (CUS_CODE or SUB_CODE match) or object (EMP_CODE match)
+    const message = Array.isArray(data)
+      ? "Employees retrieved successfully"
+      : "Employee retrieved successfully";
+
+    return res.status(200).send(response.success(message, data));
+  } catch (err) {
+    if (err.message === "Employee not found") {
+      console.error("Employee not found with id:", req.params.empId);
+      return res.status(404).send(response.notFound("Employee not found"));
     }
+    console.error(
+      "Error retrieving employee(s) with id",
+      req.params.empId,
+      ":",
+      err
+    );
+    return res
+      .status(500)
+      .send(
+        response.error(
+          "Error retrieving employee(s) with id " + req.params.empId
+        )
+      );
   }
+};
 
 Employee.create = async (newEmployee) => {
   try {

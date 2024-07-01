@@ -50,11 +50,21 @@ Subscription.findById = async (subId) => {
       "SELECT * FROM SUB_MAST WHERE SUB_CODE = ? OR CUS_CODE = ?",
       [subId, subId]
     );
+
     if (subscriptions.length === 0) {
       throw new Error("Subscription not found");
     }
-    // If only one subscription is found, return it directly instead of as an array
-    return subscriptions.length === 1 ? subscriptions[0] : subscriptions;
+
+    // Check if the match is by SUB_CODE
+    const subCodeMatch = subscriptions.find((sub) => sub.SUB_CODE === subId);
+
+    // If there's a SUB_CODE match, return it as a single object
+    if (subCodeMatch) {
+      return subCodeMatch;
+    }
+
+    // Otherwise, return the array of subscriptions (matching CUS_CODE)
+    return subscriptions;
   } catch (err) {
     console.error("Error retrieving subscriptions:", err);
     throw err;
