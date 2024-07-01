@@ -8,31 +8,32 @@ const Subscription = function (subscription) {
   this.SUB_STDT = subscription.SUB_STDT;
   this.SUB_ENDT = subscription.SUB_ENDT;
   this.LIC_USER = subscription.LIC_USER;
-  this.SUB_PDAT = subscription.SUB_PDAT;
+
   this.SUB_ORDN = subscription.SUB_ORDN;
   this.status = subscription.status;
   this.ORD_REQD = subscription.ORD_REQD;
 };
 
-
 // Create a new Subscription
 Subscription.create = async (newSubscription) => {
   try {
-    // Step 1: Query the database for the highest SUB_CODE
+    // Query the database for the highest SUB_CODE
     const [highestCode] = await db.query("SELECT SUB_CODE FROM SUB_MAST ORDER BY SUB_CODE DESC LIMIT 1");
     let nextCode = 1;
     if (highestCode.length > 0) {
-      // Step 2: Extract the numeric part and increment
+      // Extract the numeric part and increment
       const currentMaxNum = parseInt(highestCode[0].SUB_CODE.replace('SUB', '')) + 1;
       nextCode = currentMaxNum;
     }
     // Format the new SUB_CODE with leading zeros
     const newSUB_CODE = `SUB${nextCode.toString().padStart(3, '0')}`;
-    // Step 3: Assign the new SUB_CODE
+    // Assign the new SUB_CODE
     newSubscription.SUB_CODE = newSUB_CODE;
 
-    // Remove the check for SUB_CODE since it's now auto-generated
-    // Step 4: Insert the newSubscription into the database
+    // Ensure SUB_PDAT is not included in the newSubscription object
+    delete newSubscription.SUB_PDAT; // Remove SUB_PDAT if it exists
+
+    // Insert the newSubscription into the database
     const [res] = await db.query("INSERT INTO SUB_MAST SET ?", newSubscription);
     console.log("Created subscription: ", { id: res.insertId, ...newSubscription });
     return { id: res.insertId, ...newSubscription };
@@ -52,7 +53,8 @@ Subscription.findById = async (subId) => {
     if (subscriptions.length === 0) {
       throw new Error("Subscription not found");
     }
-    return subscriptions; // Return the entire array of subscriptions
+    // If only one subscription is found, return it directly instead of as an array
+    return subscriptions.length === 1 ? subscriptions[0] : subscriptions;
   } catch (err) {
     console.error("Error retrieving subscriptions:", err);
     throw err;

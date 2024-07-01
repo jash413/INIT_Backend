@@ -30,7 +30,8 @@ Employee.findByMultipleCriteria = async (searchId) => {
       if (employees.length === 0) {
         throw new Error("Employee not found");
       }
-      return employees; // Return all matching employees
+      // If only one employee is found, return that employee as an object instead of an array
+      return employees.length === 1 ? employees[0] : employees; // Return single object or all matching employees
     } catch (err) {
       console.error("Error retrieving employee(s):", err);
       throw err;
