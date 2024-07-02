@@ -6,7 +6,6 @@ const saltRounds = 10;
 const pagination = require("../middlewares/pagination");
 const db = require("../utils/db");
 const axios = require("axios");
-
 const crypto = require("crypto");
 
 exports.sendAdminOTP = async (req, res) => {
@@ -17,27 +16,46 @@ exports.sendAdminOTP = async (req, res) => {
       return res.status(400).json({ error: "Phone number is required" });
     }
 
+    const [adminQueryResult] = await db.query(
+      "SELECT ad_id, ad_name, ad_email, ad_phone, ad_type FROM usr_admin WHERE ad_phone = ?",
+      [phoneNumber]
+    );
+
+    if (adminQueryResult.length === 0) {
+      console.log(phoneNumber, "not present in any user");
+      return res
+        .status(404)
+        .json({ error: "No admin user found with the provided phone number" });
+    }
+
+    const adminUser = adminQueryResult[0];
+
     // Generate a new 6-digit OTP
     const otp = crypto.randomInt(100000, 999999).toString();
 
     // Construct the URL with the phone number and new OTP
     const url = `http://msg.jmdinfotek.in/api/mt/SendSMS?user=SSIFAS&password=123456&senderid=SSIFAS&channel=Trans&DCS=0&flashsms=0&number=${phoneNumber}&text=OTP+for+SAISUN+iFAS+ERP+App+is:+${otp}&route=07`;
 
-    console.log("Sending request to:", url);
-
     // Make the GET request
     const apiResponse = await axios.get(url);
 
-    console.log("API Response:", apiResponse.data);
+    // Generate JWT token
+    const token = jwt.sign(
+      { id: adminUser.ad_id, phone: adminUser.ad_phone },
+      process.env.JWT_SECRET,
+      { expiresIn: "1h" }
+    );
 
-    // Send the API response along with the generated OTP
-    res.json({
+    // Send the API response along with the generated OTP and JWT token
+    const responseObj = {
       ...apiResponse.data,
       generatedOTP: otp,
-    });
+      token: token,
+    };
+
+    return res.json(responseObj);
   } catch (error) {
-    console.error("Error in sendAdminOTP:", error);
-    res.status(500).json({ error: "Error sending OTP" });
+    return res.status(500).json({ error: "Error sending OTP" });
   }
 };
 
@@ -95,6 +113,7 @@ exports.create = async (req, res) => {
       ad_delete: req.body.ad_delete,
       ad_type: req.body.ad_type,
       ad_id: req.body.ad_id,
+      ad_phone: req.body.ad_phone,
     });
 
     const data = await Admin.create(admin);

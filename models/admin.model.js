@@ -10,6 +10,7 @@ const Admin = function (admin) {
   this.ad_pass = admin.ad_pass;
   this.ad_delete = admin.ad_delete;
   this.ad_type = admin.ad_type;
+  this.ad_phone = admin.ad_phone;
 };
 
 
@@ -42,13 +43,14 @@ Admin.create = async (newAdmin) => {
 Admin.updateById = async (adId, admin) => {
   try {
     const [res] = await db.query(
-      "UPDATE usr_admin SET ad_name = ?, ad_email = ?, ad_pass = ?, ad_delete = ?, ad_type = ? WHERE ad_id = ?",
+      "UPDATE usr_admin SET ad_name = ?, ad_email = ?, ad_pass = ?, ad_delete = ?, ad_type = ?, ad_phone = ? WHERE ad_id = ?",
       [
         admin.ad_name,
         admin.ad_email,
         admin.ad_pass,
         admin.ad_delete,
         admin.ad_type,
+        admin.ad_phone, // Add this line to include the ad_phone in the parameters
         adId,
       ]
     );
