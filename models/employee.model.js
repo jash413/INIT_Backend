@@ -19,6 +19,47 @@ const Employee = function (employee) {
   this.REG_TOKEN = employee.REG_TOKEN;
 };
 
+Employee.create = async (newEmployee) => {
+  try {
+    // Fetch the SUB_STDT and SUB_ENDT for the given SUB_CODE
+    const [subscription] = await db.query(
+      "SELECT SUB_STDT, SUB_ENDT FROM SUB_MAST WHERE SUB_CODE = ?",
+      [newEmployee.SUB_CODE]
+    );
+
+    if (subscription.length === 0) {
+      throw new Error("Subscription code not found");
+    }
+
+    // Update the newEmployee object with the subscription dates
+    newEmployee.SUB_STDT = subscription[0].SUB_STDT;
+    newEmployee.SUB_ENDT = subscription[0].SUB_ENDT;
+
+    // Fetch the last EMP_CODE and generate the next EMP_CODE
+    const [lastEmp] = await db.query(
+      "SELECT EMP_CODE FROM EMP_MAST ORDER BY EMP_CODE DESC LIMIT 1"
+    );
+    let nextEmpCode = "E001"; // Default if no employees exist
+
+    if (lastEmp.length > 0) {
+      const lastEmpCode = lastEmp[0].EMP_CODE;
+      const numericPart = parseInt(lastEmpCode.substring(1)) + 1; // Extract numeric part and increment
+      nextEmpCode = `E${numericPart.toString().padStart(3, "0")}`; // Generate next EMP_CODE
+    }
+
+    // Add the generated EMP_CODE to newEmployee object
+    newEmployee.EMP_CODE = nextEmpCode;
+
+    // Insert the new employee with the generated EMP_CODE
+    const [res] = await db.query("INSERT INTO EMP_MAST SET ?", newEmployee);
+    console.log("Created employee: ", { id: res.insertId, ...newEmployee });
+    return { id: res.insertId, ...newEmployee };
+  } catch (err) {
+    console.error("Error creating employee:", err);
+    throw err;
+  }
+};
+
 
 Employee.findByMultipleCriteria = async (searchId) => {
   try {
@@ -48,30 +89,7 @@ Employee.findByMultipleCriteria = async (searchId) => {
   }
 };
 
-Employee.create = async (newEmployee) => {
-  try {
-    // Step 1: Fetch the last EMP_CODE
-    const [lastEmp] = await db.query("SELECT EMP_CODE FROM EMP_MAST ORDER BY EMP_CODE DESC LIMIT 1");
-    let nextEmpCode = 'E001'; // Default if no employees exist
 
-    if (lastEmp.length > 0) {
-      const lastEmpCode = lastEmp[0].EMP_CODE;
-      const numericPart = parseInt(lastEmpCode.substring(1)) + 1; // Extract numeric part and increment
-      nextEmpCode = `E${numericPart.toString().padStart(3, '0')}`; // Generate next EMP_CODE
-    }
-
-    // Step 2: Generate the next EMP_CODE and add it to newEmployee object
-    newEmployee.EMP_CODE = nextEmpCode;
-
-    // Step 3: Insert the new employee with the generated EMP_CODE
-    const [res] = await db.query("INSERT INTO EMP_MAST SET ?", newEmployee);
-    console.log("Created employee: ", { id: res.insertId, ...newEmployee });
-    return { id: res.insertId, ...newEmployee };
-  } catch (err) {
-    console.error("Error creating employee:", err);
-    throw err;
-  }
-};
 
 // Update Employee by id
 Employee.updateById = async (empId, employee) => {
