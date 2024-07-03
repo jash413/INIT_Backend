@@ -50,20 +50,26 @@ exports.findAll = async (req, res) => {
     const sort = req.query.sort || "EMP_CODE";
     const order = req.query.order || "asc";
     const search = req.query.search || "";
+    const filter_dept_id = req.query.filter_dept_id || null;
+    const filter_joined_from = req.query.filter_joined_from || null;
+    const filter_joined_to = req.query.filter_joined_to || null;
 
     const [employees, totalCount] = await Employee.getAll(
       limit,
       offset,
       sort,
       order,
-      search
+      search,
+      filter_dept_id,
+      filter_joined_from,
+      filter_joined_to
     );
     const totalPages = Math.ceil(totalCount / limit);
 
     let links = [];
     for (let i = 1; i <= totalPages; i++) {
       links.push({
-        url: `/api/employees?page=${i}&items_per_page=${limit}&sort=${sort}&order=${order}&search=${search}`,
+        url: `/api/employees?page=${i}&items_per_page=${limit}&sort=${sort}&order=${order}&search=${search}&filter_dept_id=${filter_dept_id}&filter_joined_from=${filter_joined_from}&filter_joined_to=${filter_joined_to}`,
         label: `${i}`,
         active: i === page,
         page: i,
@@ -72,7 +78,9 @@ exports.findAll = async (req, res) => {
 
     if (page > 1) {
       links.unshift({
-        url: `/api/employees?page=${page - 1}&items_per_page=${limit}&sort=${sort}&order=${order}&search=${search}`,
+        url: `/api/employees?page=${
+          page - 1
+        }&items_per_page=${limit}&sort=${sort}&order=${order}&search=${search}&filter_dept_id=${filter_dept_id}&filter_joined_from=${filter_joined_from}&filter_joined_to=${filter_joined_to}`,
         label: "&laquo; Previous",
         active: false,
         page: page - 1,
@@ -80,7 +88,9 @@ exports.findAll = async (req, res) => {
     }
     if (page < totalPages) {
       links.push({
-        url: `/api/employees?page=${page + 1}&items_per_page=${limit}&sort=${sort}&order=${order}&search=${search}`,
+        url: `/api/employees?page=${
+          page + 1
+        }&items_per_page=${limit}&sort=${sort}&order=${order}&search=${search}&filter_dept_id=${filter_dept_id}&filter_joined_from=${filter_joined_from}&filter_joined_to=${filter_joined_to}`,
         label: "Next &raquo;",
         active: false,
         page: page + 1,
@@ -89,10 +99,20 @@ exports.findAll = async (req, res) => {
 
     const paginationData = {
       page: page,
-      first_page_url: `/api/employees?page=1&items_per_page=${limit}&sort=${sort}&order=${order}&search=${search}`,
+      first_page_url: `/api/employees?page=1&items_per_page=${limit}&sort=${sort}&order=${order}&search=${search}&filter_dept_id=${filter_dept_id}&filter_joined_from=${filter_joined_from}&filter_joined_to=${filter_joined_to}`,
       last_page: totalPages,
-      next_page_url: page < totalPages ? `/api/employees?page=${page + 1}&items_per_page=${limit}&sort=${sort}&order=${order}&search=${search}` : null,
-      prev_page_url: page > 1 ? `/api/employees?page=${page - 1}&items_per_page=${limit}&sort=${sort}&order=${order}&search=${search}` : null,
+      next_page_url:
+        page < totalPages
+          ? `/api/employees?page=${
+              page + 1
+            }&items_per_page=${limit}&sort=${sort}&order=${order}&search=${search}&filter_dept_id=${filter_dept_id}&filter_joined_from=${filter_joined_from}&filter_joined_to=${filter_joined_to}`
+          : null,
+      prev_page_url:
+        page > 1
+          ? `/api/employees?page=${
+              page - 1
+            }&items_per_page=${limit}&sort=${sort}&order=${order}&search=${search}&filter_dept_id=${filter_dept_id}&filter_joined_from=${filter_joined_from}&filter_joined_to=${filter_joined_to}`
+          : null,
       items_per_page: limit,
       from: offset + 1,
       to: offset + employees.length,
@@ -106,12 +126,13 @@ exports.findAll = async (req, res) => {
       })
     );
   } catch (err) {
-    console.error("Error in findAllEmployees:", err);
+    console.error("Error in findAll:", err);
     res
       .status(500)
       .json(response.error("An error occurred while retrieving employees."));
   }
 };
+
 
 // Find a single Employee with an id
 

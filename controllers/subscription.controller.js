@@ -44,20 +44,26 @@ exports.findAll = async (req, res) => {
     const sort = req.query.sort || "SUB_CODE";
     const order = req.query.order || "asc";
     const search = req.query.search || "";
+    const filter_plan_id = req.query.filter_plan_id || null;
+    const filter_start_from = req.query.filter_start_from || null;
+    const filter_start_to = req.query.filter_start_to || null;
 
     const [subscriptions, totalCount] = await Subscription.getAll(
       limit,
       offset,
       sort,
       order,
-      search
+      search,
+      filter_plan_id,
+      filter_start_from,
+      filter_start_to
     );
     const totalPages = Math.ceil(totalCount / limit);
 
     let links = [];
     for (let i = 1; i <= totalPages; i++) {
       links.push({
-        url: `/api/subscriptions?page=${i}&items_per_page=${limit}&sort=${sort}&order=${order}&search=${search}`,
+        url: `/api/subscriptions?page=${i}&items_per_page=${limit}&sort=${sort}&order=${order}&search=${search}&filter_plan_id=${filter_plan_id}&filter_start_from=${filter_start_from}&filter_start_to=${filter_start_to}`,
         label: `${i}`,
         active: i === page,
         page: i,
@@ -66,7 +72,9 @@ exports.findAll = async (req, res) => {
 
     if (page > 1) {
       links.unshift({
-        url: `/api/subscriptions?page=${page - 1}&items_per_page=${limit}&sort=${sort}&order=${order}&search=${search}`,
+        url: `/api/subscriptions?page=${
+          page - 1
+        }&items_per_page=${limit}&sort=${sort}&order=${order}&search=${search}&filter_plan_id=${filter_plan_id}&filter_start_from=${filter_start_from}&filter_start_to=${filter_start_to}`,
         label: "&laquo; Previous",
         active: false,
         page: page - 1,
@@ -74,7 +82,9 @@ exports.findAll = async (req, res) => {
     }
     if (page < totalPages) {
       links.push({
-        url: `/api/subscriptions?page=${page + 1}&items_per_page=${limit}&sort=${sort}&order=${order}&search=${search}`,
+        url: `/api/subscriptions?page=${
+          page + 1
+        }&items_per_page=${limit}&sort=${sort}&order=${order}&search=${search}&filter_plan_id=${filter_plan_id}&filter_start_from=${filter_start_from}&filter_start_to=${filter_start_to}`,
         label: "Next &raquo;",
         active: false,
         page: page + 1,
@@ -83,10 +93,20 @@ exports.findAll = async (req, res) => {
 
     const paginationData = {
       page: page,
-      first_page_url: `/api/subscriptions?page=1&items_per_page=${limit}&sort=${sort}&order=${order}&search=${search}`,
+      first_page_url: `/api/subscriptions?page=1&items_per_page=${limit}&sort=${sort}&order=${order}&search=${search}&filter_plan_id=${filter_plan_id}&filter_start_from=${filter_start_from}&filter_start_to=${filter_start_to}`,
       last_page: totalPages,
-      next_page_url: page < totalPages ? `/api/subscriptions?page=${page + 1}&items_per_page=${limit}&sort=${sort}&order=${order}&search=${search}` : null,
-      prev_page_url: page > 1 ? `/api/subscriptions?page=${page - 1}&items_per_page=${limit}&sort=${sort}&order=${order}&search=${search}` : null,
+      next_page_url:
+        page < totalPages
+          ? `/api/subscriptions?page=${
+              page + 1
+            }&items_per_page=${limit}&sort=${sort}&order=${order}&search=${search}&filter_plan_id=${filter_plan_id}&filter_start_from=${filter_start_from}&filter_start_to=${filter_start_to}`
+          : null,
+      prev_page_url:
+        page > 1
+          ? `/api/subscriptions?page=${
+              page - 1
+            }&items_per_page=${limit}&sort=${sort}&order=${order}&search=${search}&filter_plan_id=${filter_plan_id}&filter_start_from=${filter_start_from}&filter_start_to=${filter_start_to}`
+          : null,
       items_per_page: limit,
       from: offset + 1,
       to: offset + subscriptions.length,
@@ -100,12 +120,15 @@ exports.findAll = async (req, res) => {
       })
     );
   } catch (err) {
-    console.error("Error in findAllSubscriptions:", err);
+    console.error("Error in findAll:", err);
     res
       .status(500)
-      .json(response.error("An error occurred while retrieving subscriptions."));
+      .json(
+        response.error("An error occurred while retrieving subscriptions.")
+      );
   }
 };
+
 
 // Find a single Subscription with an id
 exports.findOne = async (req, res) => {

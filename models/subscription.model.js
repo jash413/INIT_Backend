@@ -223,34 +223,73 @@ Subscription.remove = async (subId, cusCode) => {
 
 
 // Retrieve all Subscriptions
-Subscription.getAll = async (limit, offset, sort, order, search) => {
+Subscription.getAll = async (
+  limit,
+  offset,
+  sort,
+  order,
+  search,
+  filter_plan_id,
+  filter_start_from,
+  filter_start_to
+) => {
   try {
     let query = "SELECT * FROM SUB_MAST";
     let countQuery = "SELECT COUNT(*) as total FROM SUB_MAST";
     let params = [];
+    let countParams = [];
 
-    // Updated search to include additional fields
+    // Handle search
     if (search) {
       query +=
-        " WHERE CONCAT_WS('', SUB_CODE, CUS_CODE, PLA_CODE, SUB_STDT, SUB_ENDT, LIC_USER, SUB_PDAT, SUB_ORDN, ORD_REQD) LIKE ?";
+        " WHERE CONCAT_WS('', SUB_CODE, CUS_NAME, SUB_PLAN, SUB_STATUS) LIKE ?";
       countQuery +=
-        " WHERE CONCAT_WS('', SUB_CODE, CUS_CODE, PLA_CODE, SUB_STDT, SUB_ENDT, LIC_USER, SUB_PDAT, SUB_ORDN, ORD_REQD) LIKE ?";
+        " WHERE CONCAT_WS('', SUB_CODE, CUS_NAME, SUB_PLAN, SUB_STATUS) LIKE ?";
       params.push(`%${search}%`);
+      countParams.push(`%${search}%`);
     }
 
-    // Updated sort validation to include all sortable fields
+    // Handle filters
+    if (filter_plan_id || filter_start_from || filter_start_to) {
+      if (!search) {
+        query += " WHERE";
+        countQuery += " WHERE";
+      } else {
+        query += " AND";
+        countQuery += " AND";
+      }
+
+      const filters = [];
+      if (filter_plan_id) {
+        filters.push(" plan_id = ?");
+        params.push(filter_plan_id);
+        countParams.push(filter_plan_id);
+      }
+      if (filter_start_from) {
+        filters.push(" START_DATE >= ?");
+        params.push(filter_start_from);
+        countParams.push(filter_start_from);
+      }
+      if (filter_start_to) {
+        filters.push(" START_DATE <= ?");
+        params.push(filter_start_to);
+        countParams.push(filter_start_to);
+      }
+
+      query += filters.join(" AND ");
+      countQuery += filters.join(" AND ");
+    }
+
+    // Handle sorting
     if (
       sort &&
       [
         "SUB_CODE",
-        "CUS_CODE",
-        "PLA_CODE",
-        "SUB_STDT",
-        "SUB_ENDT",
-        "LIC_USER",
-        "SUB_PDAT",
-        "SUB_ORDN",
-        "ORD_REQD",
+        "CUS_NAME",
+        "START_DATE",
+        "END_DATE",
+        "SUB_PLAN",
+        "SUB_STATUS",
       ].includes(sort.toUpperCase())
     ) {
       query += ` ORDER BY ${sort} ${
@@ -260,14 +299,13 @@ Subscription.getAll = async (limit, offset, sort, order, search) => {
       query += " ORDER BY SUB_CODE ASC"; // default sorting
     }
 
+    // Handle pagination
     query += " LIMIT ? OFFSET ?";
     params.push(parseInt(limit), parseInt(offset));
 
+    // Execute queries
     const [subscriptions] = await db.query(query, params);
-    const [countResult] = await db.query(
-      countQuery,
-      search ? [`%${search}%`] : []
-    );
+    const [countResult] = await db.query(countQuery, countParams);
     const totalCount = countResult[0].total;
 
     return [subscriptions, totalCount];
@@ -276,6 +314,7 @@ Subscription.getAll = async (limit, offset, sort, order, search) => {
     throw err;
   }
 };
+
 
 
 module.exports = Subscription;
