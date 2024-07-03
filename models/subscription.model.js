@@ -8,35 +8,73 @@ const Subscription = function (subscription) {
   this.SUB_STDT = subscription.SUB_STDT;
   this.SUB_ENDT = subscription.SUB_ENDT;
   this.LIC_USER = subscription.LIC_USER;
-
   this.SUB_ORDN = subscription.SUB_ORDN;
   this.status = subscription.status;
   this.ORD_REQD = subscription.ORD_REQD;
+  this.ad_id = subscription.ad_id; // Include ad_id from req.user
 };
 
 // Create a new Subscription
 Subscription.create = async (newSubscription) => {
   try {
     // Query the database for the highest SUB_CODE
-    const [highestCode] = await db.query("SELECT SUB_CODE FROM SUB_MAST ORDER BY SUB_CODE DESC LIMIT 1");
+    const [highestCode] = await db.query(
+      "SELECT SUB_CODE FROM SUB_MAST ORDER BY SUB_CODE DESC LIMIT 1"
+    );
     let nextCode = 1;
     if (highestCode.length > 0) {
       // Extract the numeric part and increment
-      const currentMaxNum = parseInt(highestCode[0].SUB_CODE.replace('SUB', '')) + 1;
+      const currentMaxNum =
+        parseInt(highestCode[0].SUB_CODE.replace("SUB", "")) + 1;
       nextCode = currentMaxNum;
     }
     // Format the new SUB_CODE with leading zeros
-    const newSUB_CODE = `SUB${nextCode.toString().padStart(3, '0')}`;
-    // Assign the new SUB_CODE
-    newSubscription.SUB_CODE = newSUB_CODE;
+    const newSUB_CODE = `SUB${nextCode.toString().padStart(3, "0")}`;
 
-    // Ensure SUB_PDAT is not included in the newSubscription object
-    delete newSubscription.SUB_PDAT; // Remove SUB_PDAT if it exists
+    // Fetch plan details
+    const [planDetails] = await db.query(
+      "SELECT PLA_MONTH FROM SUB_PLAN WHERE PLA_CODE = ?",
+      [newSubscription.PLA_CODE]
+    );
 
-    // Insert the newSubscription into the database
-    const [res] = await db.query("INSERT INTO SUB_MAST SET ?", newSubscription);
-    console.log("Created subscription: ", { id: res.insertId, ...newSubscription });
-    return { id: res.insertId, ...newSubscription };
+    if (planDetails.length === 0) {
+      throw new Error("Invalid plan code");
+    }
+
+    const planMonths = planDetails[0].PLA_MONTH;
+
+    // Set start date to current date
+    const startDate = new Date();
+    const endDate = new Date(startDate);
+    endDate.setMonth(endDate.getMonth() + planMonths);
+
+    // Prepare the new subscription data
+    const subscriptionData = {
+      SUB_CODE: newSUB_CODE,
+      CUS_CODE: newSubscription.CUS_CODE,
+      PLA_CODE: newSubscription.PLA_CODE,
+      SUB_STDT: startDate.toISOString().split("T")[0],
+      SUB_ENDT: endDate.toISOString().split("T")[0],
+      LIC_USER: newSubscription.LIC_USER,
+      SUB_ORDN: newSubscription.SUB_ORDN,
+      status: newSubscription.status || 1, // Use provided status or default to 1
+      ORD_REQD: newSubscription.ORD_REQD,
+      ad_id: newSubscription.ad_id
+    };
+
+    // Ensure SUB_PDAT is not included
+    delete subscriptionData.SUB_PDAT;
+
+    // Insert the new subscription into the database
+    const [res] = await db.query(
+      "INSERT INTO SUB_MAST SET ?",
+      subscriptionData
+    );
+    console.log("Created subscription: ", {
+      id: res.insertId,
+      ...subscriptionData,
+    });
+    return { id: res.insertId, ...subscriptionData };
   } catch (err) {
     console.error("Error creating subscription:", err);
     throw err;
@@ -70,7 +108,6 @@ Subscription.findById = async (subId) => {
     throw err;
   }
 };
-
 
 // Update Subscription by id
 Subscription.updateByCode = async (SUB_CODE, updateData) => {
@@ -150,8 +187,25 @@ Subscription.updateByCode = async (SUB_CODE, updateData) => {
 
 
 // Delete Subscription by id
-Subscription.remove = async (subId) => {
+Subscription.remove = async (subId, cusCode) => {
   try {
+    // Check if there are any related records in EMP_MAST matching SUB_CODE
+    const [empResultBySubCode] = await db.query(
+      "SELECT COUNT(*) AS count FROM EMP_MAST WHERE SUB_CODE = ?",
+      [subId]
+    );
+
+    // Check if there are any related records in EMP_MAST matching CUS_CODE
+    const [empResultByCusCode] = await db.query(
+      "SELECT COUNT(*) AS count FROM EMP_MAST WHERE CUS_CODE = ?",
+      [cusCode]
+    );
+
+    if (empResultBySubCode[0].count > 0 || empResultByCusCode[0].count > 0) {
+      throw new Error("Cannot delete subscription with associated employees");
+    }
+
+    // Delete the subscription from SUB_MAST
     const [result] = await db.query("DELETE FROM SUB_MAST WHERE SUB_CODE = ?", [
       subId,
     ]);
@@ -160,12 +214,13 @@ Subscription.remove = async (subId) => {
       throw new Error("Subscription not found");
     }
 
-    return {result,deletedSubID : subId};
+    return { deletedSubID: subId, affectedRows: result.affectedRows };
   } catch (err) {
     console.error("Error deleting subscription:", err);
     throw err; // Re-throw the error to be handled by the caller
   }
 };
+
 
 // Retrieve all Subscriptions
 Subscription.getAll = async (limit, offset, sort, order, search) => {

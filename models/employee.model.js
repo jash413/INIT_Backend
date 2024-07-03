@@ -17,6 +17,7 @@ const Employee = function (employee) {
   this.SUB_STDT = employee.SUB_STDT;
   this.SUB_ENDT = employee.SUB_ENDT;
   this.REG_TOKEN = employee.REG_TOKEN;
+  this.ad_id = employee.ad_id; // Include ad_id from req.user
 };
 
 Employee.create = async (newEmployee) => {

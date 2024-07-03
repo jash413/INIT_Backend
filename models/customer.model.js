@@ -15,6 +15,7 @@ const Customer = function (customer) {
   this.PHO_NMBR = customer.PHO_NMBR;
   this.CUS_REFB = customer.CUS_REFB;
   this.is_active = 1;
+  this.ad_id = customer.ad_id; // Include ad_id from req.user
 };
 
 // Create a new Customer
@@ -163,20 +164,64 @@ Customer.updateById = async (CUS_CODE, updateData) => {
 };
 
 // Retrieve all Customers
-Customer.getAll = async (limit, offset, sort, order, search) => {
+Customer.getAll = async (
+  limit,
+  offset,
+  sort,
+  order,
+  search,
+  filter_ad_id,
+  filter_from,
+  filter_to
+) => {
   try {
     let query = "SELECT * FROM CUS_MAST";
     let countQuery = "SELECT COUNT(*) as total FROM CUS_MAST";
     let params = [];
+    let countParams = [];
 
+    // Handle search
     if (search) {
       query +=
         " WHERE CONCAT_WS('', CUS_CODE, CUS_NAME, CUS_MAIL, PHO_NMBR, CUS_ADDR) LIKE ?";
       countQuery +=
         " WHERE CONCAT_WS('', CUS_CODE, CUS_NAME, CUS_MAIL, PHO_NMBR, CUS_ADDR) LIKE ?";
       params.push(`%${search}%`);
+      countParams.push(`%${search}%`);
     }
 
+    // Handle filters
+    if (filter_ad_id || filter_from || filter_to) {
+      if (!search) {
+        query += " WHERE";
+        countQuery += " WHERE";
+      } else {
+        query += " AND";
+        countQuery += " AND";
+      }
+
+      const filters = [];
+      if (filter_ad_id) {
+        filters.push(" ad_id = ?");
+        params.push(filter_ad_id);
+        countParams.push(filter_ad_id);
+      }
+      if (filter_from) {
+        filters.push(" INS_DATE >= ?");
+        params.push(filter_from);
+        countParams.push(filter_from);
+      }
+      if (filter_to) {
+        filters.push(" INS_DATE <= ?");
+        params.push(filter_to);
+        countParams.push(filter_to);
+      }
+
+      query += filters.join(" AND ");
+      countQuery += filters.join(" AND ");
+    }
+
+    // Handle sorting
     if (
       sort &&
       [
@@ -195,14 +240,13 @@ Customer.getAll = async (limit, offset, sort, order, search) => {
       query += " ORDER BY CUS_CODE ASC"; // default sorting
     }
 
+    // Handle pagination
     query += " LIMIT ? OFFSET ?";
     params.push(parseInt(limit), parseInt(offset));
 
+    // Execute queries
     const [customers] = await db.query(query, params);
-    const [countResult] = await db.query(
-      countQuery,
-      search ? [`%${search}%`] : []
-    );
+    const [countResult] = await db.query(countQuery, countParams);
     const totalCount = countResult[0].total;
 
     return [customers, totalCount];
@@ -212,11 +256,27 @@ Customer.getAll = async (limit, offset, sort, order, search) => {
   }
 };
 
+
+
 // Delete Customer by id
 Customer.remove = async (CUS_CODE) => {
   const connection = await db.getConnection();
   try {
     await connection.beginTransaction();
+
+    // Check if there are any active subscriptions for the customer
+    const [activeSubscriptions] = await connection.query(
+      "SELECT COUNT(*) as count FROM SUB_MAST WHERE CUS_CODE = ? AND status = 1",
+      [CUS_CODE]
+    );
+
+    if (activeSubscriptions[0].count > 0) {
+      await connection.rollback();
+      return {
+        status: "forbidden",
+        message: "Customer has active subscriptions and cannot be deleted",
+      };
+    }
 
     // Delete related records from EMP_MAST
     await connection.query("DELETE FROM EMP_MAST WHERE CUS_CODE = ?", [
@@ -235,21 +295,24 @@ Customer.remove = async (CUS_CODE) => {
     );
 
     if (result.affectedRows === 0) {
-      throw new Error("Customer not found");
+      await connection.rollback();
+      return { status: "notFound", message: "Customer not found" };
     }
 
     await connection.commit();
-    console.log(
-      "Deleted customer, subscription plans, and employee with CUS_CODE: ",
-      CUS_CODE
-    );
-    return result;
+    return {
+      status: "success",
+      message: "Customer deleted successfully",
+      data: result,
+    };
   } catch (err) {
     await connection.rollback();
     console.error("Error deleting customer:", err);
-    throw err;
+    return { status: "error", message: "Error deleting customer" };
   } finally {
     connection.release();
   }
 };
+
+
 module.exports = Customer;

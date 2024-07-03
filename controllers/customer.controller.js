@@ -18,7 +18,7 @@ exports.create = async (req, res) => {
       CUS_NAME: req.body.CUS_NAME,
       INS_DATE: formatMomentDate(req.body.INS_DATE),
       DUE_DAYS: req.body.DUE_DAYS,
-      EXP_DATE: req.body.EXP_DATE, // Assuming EXP_DATE and MSG_EXDT are not formatted because they might already be in correct format or not date fields
+      EXP_DATE: req.body.EXP_DATE,
       USR_NMBR: req.body.USR_NMBR,
       SYN_DATE: null,
       POS_SYNC: formatMomentDate(req.body.POS_SYNC),
@@ -41,12 +41,11 @@ exports.create = async (req, res) => {
       is_active: req.body.is_active,
       app_key: req.body.app_key,
       reg_type_id: req.body.reg_type_id,
+      ad_id: req.user.id, // Set ad_id from req.user
     });
-
 
     const data = await Customer.create(customer);
     res.json(response.success("Customer created successfully", data));
-    
   } catch (err) {
     res
       .status(500)
@@ -58,6 +57,7 @@ exports.create = async (req, res) => {
   }
 };
 
+
 // Retrieve all Customers from the database
 exports.findAll = async (req, res) => {
   try {
@@ -67,20 +67,26 @@ exports.findAll = async (req, res) => {
     const sort = req.query.sort || "CUS_CODE";
     const order = req.query.order || "asc";
     const search = req.query.search || "";
+    const filter_ad_id = req.query.filter_ad_id || null;
+    const filter_from = req.query.filter_from || null;
+    const filter_to = req.query.filter_to || null;
 
     const [customers, totalCount] = await Customer.getAll(
       limit,
       offset,
       sort,
       order,
-      search
+      search,
+      filter_ad_id,
+      filter_from,
+      filter_to
     );
     const totalPages = Math.ceil(totalCount / limit);
 
     let links = [];
     for (let i = 1; i <= totalPages; i++) {
       links.push({
-        url: `/api/customers?page=${i}&items_per_page=${limit}&sort=${sort}&order=${order}&search=${search}`,
+        url: `/api/customers?page=${i}&items_per_page=${limit}&sort=${sort}&order=${order}&search=${search}&filter_ad_id=${filter_ad_id}&filter_from=${filter_from}&filter_to=${filter_to}`,
         label: `${i}`,
         active: i === page,
         page: i,
@@ -91,7 +97,7 @@ exports.findAll = async (req, res) => {
       links.unshift({
         url: `/api/customers?page=${
           page - 1
-        }&items_per_page=${limit}&sort=${sort}&order=${order}&search=${search}`,
+        }&items_per_page=${limit}&sort=${sort}&order=${order}&search=${search}&filter_ad_id=${filter_ad_id}&filter_from=${filter_from}&filter_to=${filter_to}`,
         label: "&laquo; Previous",
         active: false,
         page: page - 1,
@@ -101,7 +107,7 @@ exports.findAll = async (req, res) => {
       links.push({
         url: `/api/customers?page=${
           page + 1
-        }&items_per_page=${limit}&sort=${sort}&order=${order}&search=${search}`,
+        }&items_per_page=${limit}&sort=${sort}&order=${order}&search=${search}&filter_ad_id=${filter_ad_id}&filter_from=${filter_from}&filter_to=${filter_to}`,
         label: "Next &raquo;",
         active: false,
         page: page + 1,
@@ -110,19 +116,19 @@ exports.findAll = async (req, res) => {
 
     const paginationData = {
       page: page,
-      first_page_url: `/api/customers?page=1&items_per_page=${limit}&sort=${sort}&order=${order}&search=${search}`,
+      first_page_url: `/api/customers?page=1&items_per_page=${limit}&sort=${sort}&order=${order}&search=${search}&filter_ad_id=${filter_ad_id}&filter_from=${filter_from}&filter_to=${filter_to}`,
       last_page: totalPages,
       next_page_url:
         page < totalPages
           ? `/api/customers?page=${
               page + 1
-            }&items_per_page=${limit}&sort=${sort}&order=${order}&search=${search}`
+            }&items_per_page=${limit}&sort=${sort}&order=${order}&search=${search}&filter_ad_id=${filter_ad_id}&filter_from=${filter_from}&filter_to=${filter_to}`
           : null,
       prev_page_url:
         page > 1
           ? `/api/customers?page=${
               page - 1
-            }&items_per_page=${limit}&sort=${sort}&order=${order}&search=${search}`
+            }&items_per_page=${limit}&sort=${sort}&order=${order}&search=${search}&filter_ad_id=${filter_ad_id}&filter_from=${filter_from}&filter_to=${filter_to}`
           : null,
       items_per_page: limit,
       from: offset + 1,
@@ -234,15 +240,25 @@ exports.update = async (req, res) => {
 // Delete a Customer with the specified id in the request
 exports.delete = async (req, res) => {
   try {
-    const data = await Customer.remove(req.params.custId);
-    if (!data) {
-      res.status(404).json({ error: "Customer not found" });
-    } else {
-      res.json({ success: "Customer deleted successfully", data: {} });
+    const result = await Customer.remove(req.params.custId);
+
+    switch (result.status) {
+      case "forbidden":
+        return res.status(403).json(response.forbidden(result.message));
+      case "notFound":
+        return res.status(404).json(response.notFound(result.message));
+      case "success":
+        return res
+          .status(200)
+          .json(response.success(result.message, []));
+      case "error":
+      default:
+        return res.status(500).json(response.error(result.message));
     }
   } catch (err) {
-    res.status(500).json({
-      error: "Could not delete customer with id " + req.params.custId,
-    });
+    console.error("Error in deleteCustomer:", err);
+    return res
+      .status(500)
+      .json(response.error("An error occurred while deleting the customer"));
   }
 };

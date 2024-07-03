@@ -67,7 +67,7 @@ exports.Login = async (req, res) => {
     return res.status(500).json(response.error("Internal server error"));
   }
 
-  try {
+try {
     const admin = await Admin.findByEmail(ad_email);
     if (!admin) {
       return res.status(404).json(response.error("Admin not found"));
@@ -79,7 +79,7 @@ exports.Login = async (req, res) => {
     }
 
     const token = jwt.sign({ id: admin.ad_id }, process.env.JWT_SECRET, {
-      expiresIn: 86400, // 24 hours
+      expiresIn: 259200, // 3 days in seconds (3 * 24 * 60 * 60)
     });
 
     res.json(

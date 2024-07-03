@@ -25,6 +25,7 @@ exports.create = async (req, res) => {
       SUB_STDT: moment(req.body.SUB_STDT).format("YYYY-MM-DD"),
       SUB_ENDT: moment(req.body.SUB_ENDT).format("YYYY-MM-DD"),
       REG_TOKEN: req.body.REG_TOKEN,
+      ad_id: req.user.id,
     });
 
     const data = await Employee.create(employee);

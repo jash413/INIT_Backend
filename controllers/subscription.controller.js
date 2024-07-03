@@ -20,6 +20,7 @@ exports.create = async (req, res) => {
       SUB_ORDN: req.body.SUB_ORDN,
       status: req.body.status,
       ORD_REQD: req.body.ORD_REQD,
+      ad_id: req.user.id,
     });
 
     const data = await Subscription.create(subscription);
