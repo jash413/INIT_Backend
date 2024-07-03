@@ -202,7 +202,8 @@ Subscription.remove = async (subId, cusCode) => {
     );
 
     if (empResultBySubCode[0].count > 0 || empResultByCusCode[0].count > 0) {
-      throw new Error("Cannot delete subscription with associated employees");
+      // Instead of throwing an error, return an object indicating failure and the reason
+      return { success: false, message: "Cannot delete subscription with associated employees" };
     }
 
     // Delete the subscription from SUB_MAST
@@ -211,13 +212,16 @@ Subscription.remove = async (subId, cusCode) => {
     ]);
 
     if (result.affectedRows === 0) {
-      throw new Error("Subscription not found");
+      // Return an object indicating the subscription was not found
+      return { success: false, message: "Subscription not found" };
     }
 
-    return { deletedSubID: subId, affectedRows: result.affectedRows };
+    // Return an object indicating success
+    return { success: true, deletedSubID: subId, affectedRows: result.affectedRows };
   } catch (err) {
     console.error("Error deleting subscription:", err);
-    throw err; // Re-throw the error to be handled by the caller
+    // Re-throw the error to be handled by the caller, or handle it as needed
+    throw err;
   }
 };
 
