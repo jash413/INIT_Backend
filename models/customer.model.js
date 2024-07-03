@@ -207,12 +207,12 @@ Customer.getAll = async (
         countParams.push(filter_ad_id);
       }
       if (filter_from) {
-        filters.push(" INS_DATE >= ?");
+        filters.push(" CREATED_AT >= ?");
         params.push(filter_from);
         countParams.push(filter_from);
       }
       if (filter_to) {
-        filters.push(" INS_DATE <= ?");
+        filters.push(" CREATED_AT <= ?");
         params.push(filter_to);
         countParams.push(filter_to);
       }
