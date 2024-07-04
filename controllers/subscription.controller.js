@@ -210,17 +210,25 @@ exports.update = async (req, res) => {
 // Delete a Subscription with the specified id in the request
 exports.delete = async (req, res) => {
   try {
-    await Subscription.remove(req.params.subId);
-    res.send({ message: "Subscription deleted successfully!" });
-  } catch (err) {
-    if (err.message === "Subscription not found") {
-      res.status(404).send({ message: "Subscription not found" });
+    const result = await Subscription.remove(
+      req.params.subId,
+      req.params.cusCode
+    );
+    if (result.success) {
+      res.send({ message: "Subscription deleted successfully!" });
     } else {
-      console.error("Error in delete controller:", err);
-      res.status(500).send({
-        message: `Could not delete subscription with id ${req.params.subId}`,
-      });
+      if (result.message === "Subscription not found") {
+        res.status(404).send({ message: "Subscription not found" });
+      } else {
+        res.status(400).send({ message: result.message });
+      }
     }
+  } catch (err) {
+    console.error("Error in delete controller:", err);
+    res.status(500).send({
+      message: `Could not delete subscription with id ${req.params.subId}`,
+    });
   }
 };
+
 

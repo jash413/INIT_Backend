@@ -228,33 +228,31 @@ Subscription.remove = async (subId, cusCode) => {
       "SELECT COUNT(*) AS count FROM EMP_MAST WHERE SUB_CODE = ?",
       [subId]
     );
-
     // Check if there are any related records in EMP_MAST matching CUS_CODE
     const [empResultByCusCode] = await db.query(
       "SELECT COUNT(*) AS count FROM EMP_MAST WHERE CUS_CODE = ?",
       [cusCode]
     );
-
     if (empResultBySubCode[0].count > 0 || empResultByCusCode[0].count > 0) {
-      // Instead of throwing an error, return an object indicating failure and the reason
-      return { success: false, message: "Cannot delete subscription with associated employees" };
+      return {
+        success: false,
+        message: "Cannot delete subscription with associated employees",
+      };
     }
-
     // Delete the subscription from SUB_MAST
     const [result] = await db.query("DELETE FROM SUB_MAST WHERE SUB_CODE = ?", [
       subId,
     ]);
-
     if (result.affectedRows === 0) {
-      // Return an object indicating the subscription was not found
       return { success: false, message: "Subscription not found" };
     }
-
-    // Return an object indicating success
-    return { success: true, deletedSubID: subId, affectedRows: result.affectedRows };
+    return {
+      success: true,
+      deletedSubID: subId,
+      affectedRows: result.affectedRows,
+    };
   } catch (err) {
     console.error("Error deleting subscription:", err);
-    // Re-throw the error to be handled by the caller, or handle it as needed
     throw err;
   }
 };
