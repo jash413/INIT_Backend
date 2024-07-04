@@ -2,7 +2,7 @@ exports.success = (message, data, payload, statusCode = 200) => {
   return {
     status: "success",
     message: message,
-    data: Array.isArray(data) ? data : [data],
+    data: data,
     payload: payload,
     statusCode: statusCode,
   };
