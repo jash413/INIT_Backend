@@ -21,6 +21,7 @@ exports.create = async (req, res) => {
       status: req.body.status,
       ORD_REQD: req.body.ORD_REQD,
       ad_id: req.user.id,
+      INV_DATE : req.body.INV_DATE,
     });
 
     const data = await Subscription.create(subscription);
@@ -35,6 +36,7 @@ exports.create = async (req, res) => {
       );
   }
 };
+
 // Retrieve all Subscriptions from the database
 exports.findAll = async (req, res) => {
   try {
@@ -167,8 +169,6 @@ exports.findOne = async (req, res) => {
 
 // Update a Subscription identified by the id in the request
 exports.update = async (req, res) => {
-
-
   if (!req.body || Object.keys(req.body).length === 0) {
     console.log("Empty request body");
     return res
@@ -179,32 +179,33 @@ exports.update = async (req, res) => {
   const subCode = req.params.subCode;
 
   try {
-    const data = await Subscription.updateByCode(subCode, req.body);
+    const result = await Subscription.updateByCode(subCode, req.body);
+
+    if (result.error) {
+      return res
+        .status(result.statusCode)
+        .send(response.error(result.error, result.statusCode));
+    }
 
     return res
       .status(200)
-      .send(response.success("Subscription updated successfully", data));
+      .send(
+        response.success("Subscription updated successfully", result.data[0])
+      );
   } catch (err) {
     console.error("Error in updateByCode:", err);
-    if (err.message === "Subscription not found") {
-      return res
-        .status(404)
-        .send(
-          response.notFound(
-            `Subscription not found with code ${subCode}.`
-          )
-        );
-    } else {
-      return res
-        .status(500)
-        .send(
-          response.error(
-            `Error updating Subscription with code ${subCode}: ${err.message}`
-          )
-        );
-    }
+    return res
+      .status(500)
+      .send(
+        response.error(
+          `Error updating Subscription with code ${subCode}: ${err.message}`
+        )
+      );
   }
 };
+
+
+
 
 // Delete a Subscription with the specified id in the request
 exports.delete = async (req, res) => {

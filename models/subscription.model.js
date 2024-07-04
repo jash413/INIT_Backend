@@ -11,6 +11,7 @@ const Subscription = function (subscription) {
   this.SUB_ORDN = subscription.SUB_ORDN;
   this.status = subscription.status;
   this.ORD_REQD = subscription.ORD_REQD;
+  this.INV_DATE = subscription.INV_DATE;
   this.ad_id = subscription.ad_id; // Include ad_id from req.user
 };
 
@@ -59,7 +60,8 @@ Subscription.create = async (newSubscription) => {
       SUB_ORDN: newSubscription.SUB_ORDN,
       status: newSubscription.status || 1, // Use provided status or default to 1
       ORD_REQD: newSubscription.ORD_REQD,
-      ad_id: newSubscription.ad_id
+      ad_id: newSubscription.ad_id,
+      INV_DATE: newSubscription.INV_DATE,
     };
 
     // Ensure SUB_PDAT is not included
@@ -135,15 +137,15 @@ Subscription.updateByCode = async (SUB_CODE, updateData) => {
           // Handle date fields
           const date = new Date(value);
           if (isNaN(date.getTime())) {
-            throw new Error(`Invalid ${key} format`);
+            return { error: `Invalid ${key} format`, statusCode: 400 };
           }
           updateFields.push(`${key} = ?`);
-          updateValues.push(date.toISOString().slice(0, 10)); // Format as YYYY-MM-DD
+          updateValues.push(date.toISOString().split("T")[0]); // Format as YYYY-MM-DD
         } else if (key === "LIC_USER") {
           // Ensure LIC_USER is a smallint
           const licUser = parseInt(value, 10);
           if (isNaN(licUser) || licUser < 0 || licUser > 32767) {
-            throw new Error("Invalid LIC_USER value");
+            return { error: "Invalid LIC_USER value", statusCode: 400 };
           }
           updateFields.push(`${key} = ?`);
           updateValues.push(licUser);
@@ -151,7 +153,7 @@ Subscription.updateByCode = async (SUB_CODE, updateData) => {
           // Ensure status is 0 or 1
           const status = parseInt(value, 10);
           if (status !== 0 && status !== 1) {
-            throw new Error("Invalid status value");
+            return { error: "Invalid status value", statusCode: 400 };
           }
           updateFields.push(`${key} = ?`);
           updateValues.push(status);
@@ -163,7 +165,27 @@ Subscription.updateByCode = async (SUB_CODE, updateData) => {
     }
 
     if (updateFields.length === 0) {
-      throw new Error("No valid fields to update");
+      return { error: "No valid fields to update", statusCode: 400 };
+    }
+
+    // Handle plan code and calculate end date
+    if (updateData.PLA_CODE) {
+      const [planDetails] = await db.query(
+        "SELECT PLA_MONTH FROM SUB_PLAN WHERE PLA_CODE = ?",
+        [updateData.PLA_CODE]
+      );
+
+      if (planDetails.length === 0) {
+        return { error: "Invalid plan code", statusCode: 400 };
+      }
+
+      const planMonths = planDetails[0]["PLA_MONTH"]; // Corrected syntax
+      const startDate = new Date(updateData.SUB_STDT || new Date());
+      const endDate = new Date(startDate);
+      endDate.setMonth(endDate.getMonth() + planMonths);
+
+      updateFields.push("SUB_ENDT = ?");
+      updateValues.push(endDate.toISOString().split("T")[0]); // Format as YYYY-MM-DD
     }
 
     updateValues.push(SUB_CODE);
@@ -174,16 +196,28 @@ Subscription.updateByCode = async (SUB_CODE, updateData) => {
     const [result] = await db.query(sql, updateValues);
 
     if (result.affectedRows === 0) {
-      throw new Error("Subscription not found");
+      return { error: "Subscription not found", statusCode: 404 };
     }
 
+    // Fetch the updated subscription
+    const [updatedSubscription] = await db.query(
+      "SELECT * FROM SUB_MAST WHERE SUB_CODE = ?",
+      [SUB_CODE]
+    );
+
     console.log("Updated subscription: ", { SUB_CODE, ...updateData });
-    return { SUB_CODE, ...updateData };
+    return { data: updatedSubscription, statusCode: 200 };
   } catch (err) {
     console.error("Error updating subscription:", err);
-    throw err;
+    return {
+      error: `Error updating Subscription: ${err.message}`,
+      statusCode: 500,
+    };
   }
 };
+
+
+
 
 
 // Delete Subscription by id
