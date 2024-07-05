@@ -24,50 +24,49 @@ Subscription.create = async (newSubscription) => {
     );
     let nextCode = 1;
     if (highestCode.length > 0) {
-      // Extract the numeric part and increment
       const currentMaxNum =
         parseInt(highestCode[0].SUB_CODE.replace("SUB", "")) + 1;
       nextCode = currentMaxNum;
     }
-    // Format the new SUB_CODE with leading zeros
     const newSUB_CODE = `SUB${nextCode.toString().padStart(3, "0")}`;
+
+    // Check for SUB_STDT
+    if (!newSubscription.SUB_STDT) {
+      return response.badRequest("Subscription start date is required");
+    }
 
     // Fetch plan details
     const [planDetails] = await db.query(
       "SELECT PLA_MONTH FROM SUB_PLAN WHERE PLA_CODE = ?",
       [newSubscription.PLA_CODE]
     );
-
     if (planDetails.length === 0) {
-      throw new Error("Invalid plan code");
+      return response.notFound("Invalid plan code");
     }
-
     const planMonths = planDetails[0].PLA_MONTH;
 
-    // Set start date to current date
-    const startDate = new Date();
+    const startDate = new Date(newSubscription.SUB_STDT);
+    if (isNaN(startDate.getTime())) {
+      return response.badRequest("Invalid start date format");
+    }
+
     const endDate = new Date(startDate);
     endDate.setMonth(endDate.getMonth() + planMonths);
 
-    // Prepare the new subscription data
     const subscriptionData = {
       SUB_CODE: newSUB_CODE,
       CUS_CODE: newSubscription.CUS_CODE,
       PLA_CODE: newSubscription.PLA_CODE,
-      SUB_STDT: startDate.toISOString().split("T")[0],
+      SUB_STDT: newSubscription.SUB_STDT, // Already in YYYY-MM-DD format
       SUB_ENDT: endDate.toISOString().split("T")[0],
       LIC_USER: newSubscription.LIC_USER,
       SUB_ORDN: newSubscription.SUB_ORDN,
-      status: newSubscription.status || 1, // Use provided status or default to 1
+      status: newSubscription.status || 1,
       ORD_REQD: newSubscription.ORD_REQD,
       ad_id: newSubscription.ad_id,
       INV_DATE: newSubscription.INV_DATE,
     };
 
-    // Ensure SUB_PDAT is not included
-    delete subscriptionData.SUB_PDAT;
-
-    // Insert the new subscription into the database
     const [res] = await db.query(
       "INSERT INTO SUB_MAST SET ?",
       subscriptionData
@@ -76,10 +75,13 @@ Subscription.create = async (newSubscription) => {
       id: res.insertId,
       ...subscriptionData,
     });
-    return { id: res.insertId, ...subscriptionData };
+    return response.success("Subscription created successfully", {
+      id: res.insertId,
+      ...subscriptionData,
+    });
   } catch (err) {
     console.error("Error creating subscription:", err);
-    throw err;
+    return response.error("An error occurred while creating the subscription");
   }
 };
 
@@ -124,8 +126,22 @@ Subscription.updateByCode = async (SUB_CODE, updateData) => {
     "status",
     "ORD_REQD",
   ];
+  const dateFields = [
+    "SUB_STDT",
+    "SUB_ENDT",
+    "SUB_PDAT",
+    "INV_DATE",
+    "CREATED_AT",
+  ];
 
-  const dateFields = ["SUB_STDT", "SUB_ENDT"];
+  const formatDate = (dateString) => {
+    if (!dateString) return null;
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) {
+      throw new Error(`Invalid date format: ${dateString}`);
+    }
+    return date.toISOString().split("T")[0]; // Format as YYYY-MM-DD
+  };
 
   try {
     let updateFields = [];
@@ -134,15 +150,9 @@ Subscription.updateByCode = async (SUB_CODE, updateData) => {
     for (const [key, value] of Object.entries(updateData)) {
       if (allowedFields.includes(key)) {
         if (dateFields.includes(key) && value !== null) {
-          // Handle date fields
-          const date = new Date(value);
-          if (isNaN(date.getTime())) {
-            return { error: `Invalid ${key} format`, statusCode: 400 };
-          }
           updateFields.push(`${key} = ?`);
-          updateValues.push(date.toISOString().split("T")[0]); // Format as YYYY-MM-DD
+          updateValues.push(formatDate(value));
         } else if (key === "LIC_USER") {
-          // Ensure LIC_USER is a smallint
           const licUser = parseInt(value, 10);
           if (isNaN(licUser) || licUser < 0 || licUser > 32767) {
             return { error: "Invalid LIC_USER value", statusCode: 400 };
@@ -150,7 +160,6 @@ Subscription.updateByCode = async (SUB_CODE, updateData) => {
           updateFields.push(`${key} = ?`);
           updateValues.push(licUser);
         } else if (key === "status") {
-          // Ensure status is 0 or 1
           const status = parseInt(value, 10);
           if (status !== 0 && status !== 1) {
             return { error: "Invalid status value", statusCode: 400 };
@@ -168,34 +177,34 @@ Subscription.updateByCode = async (SUB_CODE, updateData) => {
       return { error: "No valid fields to update", statusCode: 400 };
     }
 
-    // Handle plan code and calculate end date
+    // Start transaction
+    await db.beginTransaction();
+
     if (updateData.PLA_CODE) {
       const [planDetails] = await db.query(
         "SELECT PLA_MONTH FROM SUB_PLAN WHERE PLA_CODE = ?",
         [updateData.PLA_CODE]
       );
-
       if (planDetails.length === 0) {
+        await db.rollback();
         return { error: "Invalid plan code", statusCode: 400 };
       }
-
-      const planMonths = planDetails[0]["PLA_MONTH"]; // Corrected syntax
+      const planMonths = planDetails[0].PLA_MONTH;
       const startDate = new Date(updateData.SUB_STDT || new Date());
       const endDate = new Date(startDate);
       endDate.setMonth(endDate.getMonth() + planMonths);
-
       updateFields.push("SUB_ENDT = ?");
-      updateValues.push(endDate.toISOString().split("T")[0]); // Format as YYYY-MM-DD
+      updateValues.push(formatDate(endDate));
     }
 
     updateValues.push(SUB_CODE);
-
     const sql = `UPDATE SUB_MAST SET ${updateFields.join(
       ", "
     )} WHERE SUB_CODE = ?`;
     const [result] = await db.query(sql, updateValues);
 
     if (result.affectedRows === 0) {
+      await db.rollback();
       return { error: "Subscription not found", statusCode: 404 };
     }
 
@@ -205,9 +214,23 @@ Subscription.updateByCode = async (SUB_CODE, updateData) => {
       [SUB_CODE]
     );
 
-    console.log("Updated subscription: ", { SUB_CODE, ...updateData });
-    return { data: updatedSubscription, statusCode: 200 };
+    // Format date fields in the response
+    const formattedSubscription = { ...updatedSubscription[0] };
+    for (const field of dateFields) {
+      if (formattedSubscription[field]) {
+        formattedSubscription[field] = formatDate(formattedSubscription[field]);
+      }
+    }
+
+    await db.commit();
+
+    console.log("Updated subscription: ", {
+      SUB_CODE,
+      ...formattedSubscription,
+    });
+    return { data: formattedSubscription, statusCode: 200 };
   } catch (err) {
+    await db.rollback();
     console.error("Error updating subscription:", err);
     return {
       error: `Error updating Subscription: ${err.message}`,
@@ -215,6 +238,7 @@ Subscription.updateByCode = async (SUB_CODE, updateData) => {
     };
   }
 };
+
 
 
 

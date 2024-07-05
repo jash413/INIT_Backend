@@ -5,27 +5,37 @@ const response=require('../utils/response.js')
 exports.create = async (req, res) => {
   try {
     if (!req.body) {
-      res.status(400).json(response.error("Content cannot be empty!"));
-      return;
+      return res
+        .status(400)
+        .json(response.badRequest("Content cannot be empty!"));
+    }
+    if (!req.body.SUB_STDT) {
+      return res
+        .status(400)
+        .json(
+          response.badRequest("Subscription start date (SUB_STDT) is required.")
+        );
     }
 
     const subscription = new Subscription({
-      SUB_CODE: req.body.SUB_CODE,
       CUS_CODE: req.body.CUS_CODE,
       PLA_CODE: req.body.PLA_CODE,
-      SUB_STDT: moment(req.body.SUB_STDT).format("YYYY-MM-DD"),
-      SUB_ENDT: moment(req.body.SUB_ENDT).format("YYYY-MM-DD"),
+      SUB_STDT: req.body.SUB_STDT, // Already in YYYY-MM-DD format
       LIC_USER: req.body.LIC_USER,
-      SUB_PDAT: moment(req.body.SUB_PDAT).format("YYYY-MM-DD"),
       SUB_ORDN: req.body.SUB_ORDN,
       status: req.body.status,
       ORD_REQD: req.body.ORD_REQD,
       ad_id: req.user.id,
-      INV_DATE : req.body.INV_DATE,
+      INV_DATE: req.body.INV_DATE, // Assuming this is also in YYYY-MM-DD format
     });
 
-    const data = await Subscription.create(subscription);
-    res.json(response.success("Subscription created successfully", data));
+    const result = await Subscription.create(subscription);
+
+    if (result.status === "error") {
+      return res.status(result.statusCode).json(result);
+    }
+
+    res.status(result.statusCode).json(result);
   } catch (err) {
     res
       .status(500)
@@ -187,10 +197,14 @@ exports.update = async (req, res) => {
         .send(response.error(result.error, result.statusCode));
     }
 
+    const updatedSubscription = result.data;
     return res
       .status(200)
       .send(
-        response.success("Subscription updated successfully", result.data[0])
+        response.success(
+          "Subscription updated successfully",
+          updatedSubscription
+        )
       );
   } catch (err) {
     console.error("Error in updateByCode:", err);
@@ -203,6 +217,7 @@ exports.update = async (req, res) => {
       );
   }
 };
+
 
 
 
