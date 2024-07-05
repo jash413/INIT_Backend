@@ -238,15 +238,7 @@ Employee.updateById = async (empId, employee) => {
           .replace(/\.\d{3}Z$/, "");
         setParts.push(`${key.toUpperCase()} = ?`);
         values.push(formattedDate);
-      } else if (key === "USR_TYPE") {
-        // Convert `USR_TYPE` from `1` or `0` to `A` or `N`
-        const usrType = value === "1" ? "A" : value === "0" ? "N" : value;
-        setParts.push(`${key.toUpperCase()} = ?`);
-        values.push(usrType);
-      } else {
-        setParts.push(`${key.toUpperCase()} = ?`);
-        values.push(value);
-      }
+      } 
     }
 
     const setClause = setParts.join(", ");
