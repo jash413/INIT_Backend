@@ -135,32 +135,54 @@ exports.findAll = async (req, res) => {
 
 
 // Find a single Employee with an id
-
 exports.findOne = async (req, res) => {
   try {
-    const data = await Employee.findByMultipleCriteria(req.params.empId);
-    if (!data || data.length === 0) {
-      console.error("Employee not found with id:", req.params.empId);
-      return res.status(404).send(response.notFound("Employee not found"));
+    const empId = req.params.empId;
+
+    // First, try to find by EMP_CODE
+    const employee = await Employee.findByEmpCode(empId);
+
+    if (employee) {
+      res
+        .status(200)
+        .send(
+          response.success("Employee retrieved successfully", employee, {}, 200)
+        );
+    } else {
+      // If not found by EMP_CODE, use the multiple criteria search
+      const limit = req.query.limit || 10;
+      const offset = req.query.offset || 0;
+      const sort = req.query.sort || "EMP_CODE";
+      const order = req.query.order || "ASC";
+
+      const [employees, totalCount] = await Employee.findByMultipleCriteria(
+        limit,
+        offset,
+        sort,
+        order,
+        null, // search
+        null, // filter_dept_id
+        null, // filter_joined_from
+        null, // filter_joined_to
+        empId // searchId
+      );
+
+      if (employees.length === 0) {
+        res.status(404).send({
+          message: `Employee not found with id ${empId}`,
+        });
+      } else {
+        res.send({ employees, totalCount });
+      }
     }
-    console.log("Employee(s) retrieved successfully:", data);
-    return res
-      .status(200)
-      .send(response.success("Employee(s) retrieved successfully", data));
   } catch (err) {
     console.error(
-      "Error retrieving employee(s) with id",
-      req.params.empId,
-      ":",
+      `Error retrieving employee(s) with id ${req.params.empId}:`,
       err
     );
-    return res
-      .status(500)
-      .send(
-        response.error(
-          "Error retrieving employee(s) with id " + req.params.empId
-        )
-      );
+    res.status(500).send({
+      message: `Error retrieving employee(s) with id ${req.params.empId}`,
+    });
   }
 };
 

@@ -62,7 +62,23 @@ Employee.create = async (newEmployee) => {
 };
 
 
-Employee.FIndByfindByMultipleCriteria = async (
+Employee.findByEmpCode = async (empCode) => {
+  try {
+    const [employees] = await db.query(
+      "SELECT * FROM EMP_MAST WHERE EMP_CODE = ?",
+      [empCode]
+    );
+    if (employees.length === 0) {
+      throw { message: "Employee not found" };
+    }
+    return employees[0];
+  } catch (err) {
+    console.error("Error retrieving employee by EMP_CODE:", err);
+    throw err;
+  }
+};
+
+Employee.findByMultipleCriteria = async (
   limit,
   offset,
   sort,
@@ -74,19 +90,20 @@ Employee.FIndByfindByMultipleCriteria = async (
   searchId
 ) => {
   try {
+    limit = !isNaN(parseInt(limit)) ? parseInt(limit) : 10;
+    offset = !isNaN(parseInt(offset)) ? parseInt(offset) : 0;
+
     let query = "SELECT * FROM EMP_MAST";
     let countQuery = "SELECT COUNT(*) as total FROM EMP_MAST";
     let params = [];
     let countParams = [];
 
-    // Handle multiple criteria search
     if (searchId) {
       query += " WHERE EMP_CODE = ? OR CUS_CODE = ? OR SUB_CODE = ?";
       countQuery += " WHERE EMP_CODE = ? OR CUS_CODE = ? OR SUB_CODE = ?";
       params.push(searchId, searchId, searchId);
       countParams.push(searchId, searchId, searchId);
     } else {
-      // Handle search
       if (search) {
         query +=
           " WHERE CONCAT_WS('', EMP_CODE, EMP_NAME, EMP_MAIL, PHO_NMBR, EMP_ADDR) LIKE ?";
@@ -96,7 +113,6 @@ Employee.FIndByfindByMultipleCriteria = async (
         countParams.push(`%${search}%`);
       }
 
-      // Handle filters
       if (filter_dept_id || filter_joined_from || filter_joined_to) {
         if (!search) {
           query += " WHERE";
@@ -108,17 +124,17 @@ Employee.FIndByfindByMultipleCriteria = async (
 
         const filters = [];
         if (filter_dept_id) {
-          filters.push(" dept_id = ?");
+          filters.push("dept_id = ?");
           params.push(filter_dept_id);
           countParams.push(filter_dept_id);
         }
         if (filter_joined_from) {
-          filters.push(" JOINED_AT >= ?");
+          filters.push("JOINED_AT >= ?");
           params.push(filter_joined_from);
           countParams.push(filter_joined_from);
         }
         if (filter_joined_to) {
-          filters.push(" JOINED_AT <= ?");
+          filters.push("JOINED_AT <= ?");
           params.push(filter_joined_to);
           countParams.push(filter_joined_to);
         }
@@ -128,7 +144,6 @@ Employee.FIndByfindByMultipleCriteria = async (
       }
     }
 
-    // Handle sorting
     if (
       sort &&
       [
@@ -144,25 +159,15 @@ Employee.FIndByfindByMultipleCriteria = async (
         order.toUpperCase() === "DESC" ? "DESC" : "ASC"
       }`;
     } else {
-      query += " ORDER BY EMP_CODE ASC"; // default sorting
+      query += " ORDER BY EMP_CODE ASC";
     }
 
-    // Handle pagination
     query += " LIMIT ? OFFSET ?";
-    params.push(parseInt(limit), parseInt(offset));
+    params.push(limit, offset);
 
-    // Execute queries
     const [employees] = await db.query(query, params);
     const [countResult] = await db.query(countQuery, countParams);
     const totalCount = countResult[0].total;
-
-    // Check if the match is by EMP_CODE
-    const empCodeMatch = employees.find((emp) => emp.EMP_CODE === searchId);
-
-    // If there's an EMP_CODE match, return it as a single object
-    if (empCodeMatch) {
-      return [empCodeMatch, 1];
-    }
 
     return [employees, totalCount];
   } catch (err) {
@@ -170,9 +175,6 @@ Employee.FIndByfindByMultipleCriteria = async (
     throw err;
   }
 };
-
-
-
 
 // Update Employee by id
 Employee.updateById = async (empId, employee) => {
