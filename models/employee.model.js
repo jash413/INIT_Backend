@@ -61,6 +61,13 @@ Employee.create = async (newEmployee) => {
       }
     }
 
+    // Convert `USR_TYPE` from `1` or `0` to `A` or `N`
+    if (newEmployee.USR_TYPE === "1") {
+      newEmployee.USR_TYPE = "A";
+    } else if (newEmployee.USR_TYPE === "0") {
+      newEmployee.USR_TYPE = "N";
+    }
+
     // Insert the new employee with the generated EMP_CODE
     const [res] = await db.query("INSERT INTO EMP_MAST SET ?", newEmployee);
     console.log("Created employee: ", { id: res.insertId, ...newEmployee });
@@ -203,17 +210,15 @@ Employee.findByMultipleCriteria = async (
 // Update Employee by id
 Employee.updateById = async (empId, employee) => {
   try {
+    
     const setParts = [];
     const values = [];
 
-    // Convert all string fields in the employee object to uppercase
     for (const [key, value] of Object.entries(employee)) {
       if (typeof value === "string" && value.constructor === String) {
         employee[key] = value.toUpperCase();
       }
-    }
 
-    for (const [key, value] of Object.entries(employee)) {
       // Check if the value is a datetime string in ISO 8601 format
       if (
         typeof value === "string" &&
@@ -231,6 +236,8 @@ Employee.updateById = async (empId, employee) => {
         values.push(value);
       }
     }
+
+    
 
     const setClause = setParts.join(", ");
     values.push(empId.toUpperCase());
@@ -250,6 +257,7 @@ Employee.updateById = async (empId, employee) => {
     throw err;
   }
 };
+
 
 
 // Delete Employee by id
