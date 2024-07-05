@@ -51,6 +51,16 @@ Employee.create = async (newEmployee) => {
     // Add the generated EMP_CODE to newEmployee object
     newEmployee.EMP_CODE = nextEmpCode;
 
+    // Convert all string and char fields in newEmployee to uppercase
+    for (const key in newEmployee) {
+      if (
+        typeof newEmployee[key] === "string" &&
+        newEmployee[key].constructor === String
+      ) {
+        newEmployee[key] = newEmployee[key].toUpperCase();
+      }
+    }
+
     // Insert the new employee with the generated EMP_CODE
     const [res] = await db.query("INSERT INTO EMP_MAST SET ?", newEmployee);
     console.log("Created employee: ", { id: res.insertId, ...newEmployee });
@@ -62,21 +72,6 @@ Employee.create = async (newEmployee) => {
 };
 
 
-Employee.findByEmpCode = async (empCode) => {
-  try {
-    const [employees] = await db.query(
-      "SELECT * FROM EMP_MAST WHERE EMP_CODE = ?",
-      [empCode]
-    );
-    if (employees.length === 0) {
-      throw { message: "Employee not found" };
-    }
-    return employees[0];
-  } catch (err) {
-    console.error("Error retrieving employee by EMP_CODE:", err);
-    throw err;
-  }
-};
 
 Employee.findByEmpCode = async (empCode) => {
   try {
@@ -208,15 +203,41 @@ Employee.findByMultipleCriteria = async (
 // Update Employee by id
 Employee.updateById = async (empId, employee) => {
   try {
-    const [result] = await db.query(
-      "UPDATE EMP_MAST SET EMP_NAME = ?, EMP_MAIL = ?, EMP_PASS = ? WHERE EMP_CODE = ?",
-      [
-        employee.EMP_NAME,
-        employee.EMP_MAIL,
-        employee.EMP_PASS,
-        empId,
-      ]
-    );
+    const setParts = [];
+    const values = [];
+
+    // Convert all string fields in the employee object to uppercase
+    for (const [key, value] of Object.entries(employee)) {
+      if (typeof value === "string" && value.constructor === String) {
+        employee[key] = value.toUpperCase();
+      }
+    }
+
+    for (const [key, value] of Object.entries(employee)) {
+      // Check if the value is a datetime string in ISO 8601 format
+      if (
+        typeof value === "string" &&
+        value.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z$/)
+      ) {
+        // Convert the datetime string to MySQL's datetime format
+        const formattedDate = new Date(value)
+          .toISOString()
+          .replace("T", " ")
+          .replace(/\.\d{3}Z$/, "");
+        setParts.push(`${key.toUpperCase()} = ?`);
+        values.push(formattedDate);
+      } else {
+        setParts.push(`${key.toUpperCase()} = ?`);
+        values.push(value);
+      }
+    }
+
+    const setClause = setParts.join(", ");
+    values.push(empId.toUpperCase());
+
+    const sqlQuery = `UPDATE EMP_MAST SET ${setClause} WHERE EMP_CODE = ?`;
+
+    const [result] = await db.query(sqlQuery, values);
 
     if (result.affectedRows === 0) {
       throw new Error("Employee not found");

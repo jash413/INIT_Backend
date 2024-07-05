@@ -24,12 +24,19 @@ Customer.create = async (newCustomer) => {
     throw new Error("CUS_NAME is required");
   }
 
+  // Convert all string values in newCustomer to uppercase
+  for (const key in newCustomer) {
+    if (typeof newCustomer[key] === 'string' && (newCustomer[key].constructor === String)) {
+      newCustomer[key] = newCustomer[key].toUpperCase();
+    }
+  }
+
   const now = new Date();
   const expirationDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days from now
 
   // Generate CUS_CODE
   const nameParts = newCustomer.CUS_NAME.split(" ");
-  const initials = nameParts.map((part) => part[0].toUpperCase()).join("");
+  const initials = nameParts.map((part) => part[0]).join("");
 
   try {
     // Find the highest number for the given initials
@@ -114,6 +121,16 @@ Customer.updateById = async (CUS_CODE, updateData) => {
     let updateFields = [];
     let updateValues = [];
 
+    // Convert all string fields in the updateData object to uppercase
+    for (const [key, value] of Object.entries(updateData)) {
+      if (allowedFields.includes(key)) {
+        if (typeof value === "string" && value.constructor === String) {
+          updateData[key] = value.toUpperCase();
+        }
+      }
+    }
+
+    // Process each field for the SQL update query
     for (const [key, value] of Object.entries(updateData)) {
       if (allowedFields.includes(key)) {
         if (
@@ -131,10 +148,10 @@ Customer.updateById = async (CUS_CODE, updateData) => {
           if (isNaN(date.getTime())) {
             throw new Error(`Invalid ${key} format`);
           }
-          updateFields.push(`${key} = ?`);
+          updateFields.push(`${key.toUpperCase()} = ?`);
           updateValues.push(date.toISOString().slice(0, 19).replace("T", " "));
         } else {
-          updateFields.push(`${key} = ?`);
+          updateFields.push(`${key.toUpperCase()} = ?`);
           updateValues.push(value);
         }
       }
@@ -144,7 +161,7 @@ Customer.updateById = async (CUS_CODE, updateData) => {
       throw new Error("No valid fields to update");
     }
 
-    updateValues.push(CUS_CODE);
+    updateValues.push(CUS_CODE.toUpperCase());
 
     const sql = `UPDATE CUS_MAST SET ${updateFields.join(
       ", "
@@ -162,6 +179,7 @@ Customer.updateById = async (CUS_CODE, updateData) => {
     throw err;
   }
 };
+
 
 // Retrieve all Customers
 Customer.getAll = async (

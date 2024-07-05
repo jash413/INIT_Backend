@@ -18,6 +18,13 @@ const Subscription = function (subscription) {
 // Create a new Subscription
 Subscription.create = async (newSubscription) => {
   try {
+    // Convert all string values in newSubscription to uppercase
+    for (const key in newSubscription) {
+      if (typeof newSubscription[key] === 'string' && (newSubscription[key].constructor === String)) {
+        newSubscription[key] = newSubscription[key].toUpperCase();
+      }
+    }
+
     // Query the database for the highest SUB_CODE
     const [highestCode] = await db.query(
       "SELECT SUB_CODE FROM SUB_MAST ORDER BY SUB_CODE DESC LIMIT 1"
@@ -88,6 +95,9 @@ Subscription.create = async (newSubscription) => {
 // Find Subscription by id
 Subscription.findById = async (subId) => {
   try {
+    // Convert subId to uppercase
+    subId = subId.toUpperCase();
+
     const [subscriptions] = await db.query(
       "SELECT * FROM SUB_MAST WHERE SUB_CODE = ? OR CUS_CODE = ?",
       [subId, subId]
@@ -95,6 +105,18 @@ Subscription.findById = async (subId) => {
 
     if (subscriptions.length === 0) {
       throw new Error("Subscription not found");
+    }
+
+    // Convert all string fields in the subscriptions data to uppercase
+    for (const subscription of subscriptions) {
+      for (const key in subscription) {
+        if (
+          typeof subscription[key] === "string" &&
+          subscription[key].constructor === String
+        ) {
+          subscription[key] = subscription[key].toUpperCase();
+        }
+      }
     }
 
     // Check if the match is by SUB_CODE
@@ -112,6 +134,7 @@ Subscription.findById = async (subId) => {
     throw err;
   }
 };
+
 
 // Update Subscription by id
 Subscription.updateByCode = async (SUB_CODE, updateData) => {
