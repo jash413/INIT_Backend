@@ -220,7 +220,8 @@ Employee.updateById = async (empId, employee) => {
     const values = [];
 
     for (const [key, value] of Object.entries(employee)) {
-      if (key === 'EMP_CODE' || key === 'ad_id') continue;
+      if (key === "ad_id") continue;
+
       // Convert all string and char fields to uppercase
       if (typeof value === "string" && value.constructor === String) {
         employee[key] = value.toUpperCase();
@@ -238,7 +239,14 @@ Employee.updateById = async (empId, employee) => {
           .replace(/\.\d{3}Z$/, "");
         setParts.push(`${key.toUpperCase()} = ?`);
         values.push(formattedDate);
-      } 
+      } else {
+        setParts.push(`${key.toUpperCase()} = ?`);
+        values.push(value);
+      }
+    }
+
+    if (setParts.length === 0) {
+      throw new Error("No fields to update");
     }
 
     const setClause = setParts.join(", ");
@@ -259,6 +267,7 @@ Employee.updateById = async (empId, employee) => {
     throw err;
   }
 };
+
 
 
 
