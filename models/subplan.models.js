@@ -21,7 +21,7 @@ SubPlan.getAll = async () => {
 
 SubPlan.findById = async (id) => {
   try {
-    const [rows] = await db.query("SELECT * FROM SUB_PLAN WHERE PLA_ID = ?", [
+    const [rows] = await db.query("SELECT * FROM SUB_PLAN WHERE PLA_CODE = ?", [
       id,
     ]);
     if (rows.length) {
