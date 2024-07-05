@@ -78,6 +78,18 @@ Employee.findByEmpCode = async (empCode) => {
   }
 };
 
+Employee.findByEmpCode = async (empCode) => {
+  try {
+    const query = "SELECT * FROM EMP_MAST WHERE EMP_CODE = ?";
+    const [result] = await db.query(query, [empCode]);
+    return result.length ? result[0] : null;
+  } catch (err) {
+    console.error(`Error finding employee by EMP_CODE ${empCode}:`, err);
+    throw err;
+  }
+};
+
+
 Employee.findByMultipleCriteria = async (
   limit,
   offset,
@@ -87,7 +99,8 @@ Employee.findByMultipleCriteria = async (
   filter_dept_id,
   filter_joined_from,
   filter_joined_to,
-  searchId
+  searchId,
+  cusCode
 ) => {
   try {
     limit = !isNaN(parseInt(limit)) ? parseInt(limit) : 10;
@@ -113,8 +126,22 @@ Employee.findByMultipleCriteria = async (
         countParams.push(`%${search}%`);
       }
 
-      if (filter_dept_id || filter_joined_from || filter_joined_to) {
+      if (cusCode) {
         if (!search) {
+          query += " WHERE";
+          countQuery += " WHERE";
+        } else {
+          query += " AND";
+          countQuery += " AND";
+        }
+        query += " CUS_CODE = ?";
+        countQuery += " CUS_CODE = ?";
+        params.push(cusCode);
+        countParams.push(cusCode);
+      }
+
+      if (filter_dept_id || filter_joined_from || filter_joined_to) {
+        if (!search && !cusCode) {
           query += " WHERE";
           countQuery += " WHERE";
         } else {
@@ -124,7 +151,7 @@ Employee.findByMultipleCriteria = async (
 
         const filters = [];
         if (filter_dept_id) {
-          filters.push("dept_id = ?");
+          filters.push("DEPT_ID = ?");
           params.push(filter_dept_id);
           countParams.push(filter_dept_id);
         }
@@ -175,6 +202,8 @@ Employee.findByMultipleCriteria = async (
     throw err;
   }
 };
+
+
 
 // Update Employee by id
 Employee.updateById = async (empId, employee) => {

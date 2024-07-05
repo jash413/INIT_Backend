@@ -139,19 +139,19 @@ exports.findOne = async (req, res) => {
   try {
     const empId = req.params.empId;
 
-    // First, try to find by EMP_CODE
+    // Attempt to find by EMP_CODE first
     const employee = await Employee.findByEmpCode(empId);
 
     if (employee) {
-      res
+      return res
         .status(200)
         .send(
           response.success("Employee retrieved successfully", employee, {}, 200)
         );
     } else {
-      // If not found by EMP_CODE, use the multiple criteria search
-      const limit = req.query.limit || 10;
-      const offset = req.query.offset || 0;
+      // If not found by EMP_CODE, search by multiple criteria
+      const limit = parseInt(req.query.limit) || 10;
+      const offset = parseInt(req.query.offset) || 0;
       const sort = req.query.sort || "EMP_CODE";
       const order = req.query.order || "ASC";
 
@@ -168,11 +168,20 @@ exports.findOne = async (req, res) => {
       );
 
       if (employees.length === 0) {
-        res.status(404).send({
-          message: `Employee not found with id ${empId}`,
-        });
+        return res
+          .status(404)
+          .send(response.error(`Employee not found with id ${empId}`, 404));
       } else {
-        res.send({ employees, totalCount });
+        return res
+          .status(200)
+          .send(
+            response.success(
+              "Employees retrieved successfully",
+              employees,
+              { totalCount },
+              200
+            )
+          );
       }
     }
   } catch (err) {
@@ -180,11 +189,17 @@ exports.findOne = async (req, res) => {
       `Error retrieving employee(s) with id ${req.params.empId}:`,
       err
     );
-    res.status(500).send({
-      message: `Error retrieving employee(s) with id ${req.params.empId}`,
-    });
+    return res
+      .status(500)
+      .send(
+        response.error(
+          `Error retrieving employee(s) with id ${req.params.empId}: ${err.message}`,
+          500
+        )
+      );
   }
 };
+
 
 // Update an Employee identified by the id in the request
 exports.update = async (req, res) => {
