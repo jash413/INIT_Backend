@@ -18,6 +18,16 @@ const Employee = function (employee) {
   this.SUB_ENDT = employee.SUB_ENDT;
   this.REG_TOKEN = employee.REG_TOKEN;
   this.ad_id = employee.ad_id; // Include ad_id from req.user
+  this.DEVICE_ID = employee.DEVICE_ID;
+  this.STATUS = employee.STATUS ? employee.STATUS : '0';
+  this.SALE_OS_ACTIVE = employee.SALE_OS_ACTIVE;
+  this.PUR_OS_ACTIVE = employee.PUR_OS_ACTIVE;
+  this.SALE_ORDER_ACTIVE = employee.SALE_ORDER_ACTIVE;
+  this.PURCHASE_ORDER_ACTIVE = employee.PURCHASE_ORDER_ACTIVE;
+  this.SALE_ORDER_ENTRY = employee.SALE_ORDER_ENTRY;
+  this.SALE_REPORT_ACTIVE = employee.SALE_REPORT_ACTIVE;
+  this.PURCHASE_REPORT_ACTIVE = employee.PURCHASE_REPORT_ACTIVE;
+  this.LEDGER_REPORT_ACTIVE = employee.LEDGER_REPORT_ACTIVE;
 };
 
 Employee.create = async (newEmployee) => {
@@ -61,12 +71,7 @@ Employee.create = async (newEmployee) => {
       }
     }
 
-    // Convert `USR_TYPE` from `1` or `0` to `A` or `N`
-    if (newEmployee.USR_TYPE === "1") {
-      newEmployee.USR_TYPE = "A";
-    } else if (newEmployee.USR_TYPE === "0") {
-      newEmployee.USR_TYPE = "N";
-    }
+  
 
     // Insert the new employee with the generated EMP_CODE
     const [res] = await db.query("INSERT INTO EMP_MAST SET ?", newEmployee);
@@ -77,6 +82,7 @@ Employee.create = async (newEmployee) => {
     throw err;
   }
 };
+
 
 
 
@@ -210,11 +216,12 @@ Employee.findByMultipleCriteria = async (
 // Update Employee by id
 Employee.updateById = async (empId, employee) => {
   try {
-    
     const setParts = [];
     const values = [];
 
     for (const [key, value] of Object.entries(employee)) {
+      if (key === 'EMP_CODE' || key === 'ad_id') continue;
+      // Convert all string and char fields to uppercase
       if (typeof value === "string" && value.constructor === String) {
         employee[key] = value.toUpperCase();
       }
@@ -231,13 +238,16 @@ Employee.updateById = async (empId, employee) => {
           .replace(/\.\d{3}Z$/, "");
         setParts.push(`${key.toUpperCase()} = ?`);
         values.push(formattedDate);
+      } else if (key === "USR_TYPE") {
+        // Convert `USR_TYPE` from `1` or `0` to `A` or `N`
+        const usrType = value === "1" ? "A" : value === "0" ? "N" : value;
+        setParts.push(`${key.toUpperCase()} = ?`);
+        values.push(usrType);
       } else {
         setParts.push(`${key.toUpperCase()} = ?`);
         values.push(value);
       }
     }
-
-    
 
     const setClause = setParts.join(", ");
     values.push(empId.toUpperCase());
@@ -257,6 +267,7 @@ Employee.updateById = async (empId, employee) => {
     throw err;
   }
 };
+
 
 
 

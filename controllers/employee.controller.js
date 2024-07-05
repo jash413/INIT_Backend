@@ -26,6 +26,16 @@ exports.create = async (req, res) => {
       SUB_ENDT: moment(req.body.SUB_ENDT).format("YYYY-MM-DD"),
       REG_TOKEN: req.body.REG_TOKEN,
       ad_id: req.user.id,
+      DEVICE_ID: req.body.DEVICE_ID,
+      STATUS: req.body.STATUS,
+      SALE_OS_ACTIVE: req.body.SALE_OS_ACTIVE,
+      PUR_OS_ACTIVE: req.body.PUR_OS_ACTIVE,
+      SALE_ORDER_ACTIVE: req.body.SALE_ORDER_ACTIVE,
+      PURCHASE_ORDER_ACTIVE: req.body.PURCHASE_ORDER_ACTIVE,
+      SALE_ORDER_ENTRY: req.body.SALE_ORDER_ENTRY,
+      SALE_REPORT_ACTIVE: req.body.SALE_REPORT_ACTIVE,
+      PURCHASE_REPORT_ACTIVE: req.body.PURCHASE_REPORT_ACTIVE,
+      LEDGER_REPORT_ACTIVE: req.body.LEDGER_REPORT_ACTIVE,
     });
 
     const data = await Employee.create(employee);
