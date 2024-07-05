@@ -126,22 +126,8 @@ Subscription.updateByCode = async (SUB_CODE, updateData) => {
     "status",
     "ORD_REQD",
   ];
-  const dateFields = [
-    "SUB_STDT",
-    "SUB_ENDT",
-    "SUB_PDAT",
-    "INV_DATE",
-    "CREATED_AT",
-  ];
 
-  const formatDate = (dateString) => {
-    if (!dateString) return null;
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) {
-      throw new Error(`Invalid date format: ${dateString}`);
-    }
-    return date.toISOString().split("T")[0]; // Format as YYYY-MM-DD
-  };
+  const dateFields = ["SUB_STDT", "SUB_ENDT"];
 
   try {
     let updateFields = [];
@@ -150,9 +136,15 @@ Subscription.updateByCode = async (SUB_CODE, updateData) => {
     for (const [key, value] of Object.entries(updateData)) {
       if (allowedFields.includes(key)) {
         if (dateFields.includes(key) && value !== null) {
+          // Handle date fields
+          const date = new Date(value);
+          if (isNaN(date.getTime())) {
+            return { error: `Invalid ${key} format`, statusCode: 400 };
+          }
           updateFields.push(`${key} = ?`);
-          updateValues.push(formatDate(value));
+          updateValues.push(date.toISOString().split("T")[0]); // Format as YYYY-MM-DD
         } else if (key === "LIC_USER") {
+          // Ensure LIC_USER is a smallint
           const licUser = parseInt(value, 10);
           if (isNaN(licUser) || licUser < 0 || licUser > 32767) {
             return { error: "Invalid LIC_USER value", statusCode: 400 };
@@ -160,6 +152,7 @@ Subscription.updateByCode = async (SUB_CODE, updateData) => {
           updateFields.push(`${key} = ?`);
           updateValues.push(licUser);
         } else if (key === "status") {
+          // Ensure status is 0 or 1
           const status = parseInt(value, 10);
           if (status !== 0 && status !== 1) {
             return { error: "Invalid status value", statusCode: 400 };
@@ -177,34 +170,34 @@ Subscription.updateByCode = async (SUB_CODE, updateData) => {
       return { error: "No valid fields to update", statusCode: 400 };
     }
 
-    // Start transaction
-    await db.beginTransaction();
-
+    // Handle plan code and calculate end date
     if (updateData.PLA_CODE) {
       const [planDetails] = await db.query(
         "SELECT PLA_MONTH FROM SUB_PLAN WHERE PLA_CODE = ?",
         [updateData.PLA_CODE]
       );
+
       if (planDetails.length === 0) {
-        await db.rollback();
         return { error: "Invalid plan code", statusCode: 400 };
       }
-      const planMonths = planDetails[0].PLA_MONTH;
+
+      const planMonths = planDetails[0]["PLA_MONTH"]; // Corrected syntax
       const startDate = new Date(updateData.SUB_STDT || new Date());
       const endDate = new Date(startDate);
       endDate.setMonth(endDate.getMonth() + planMonths);
+
       updateFields.push("SUB_ENDT = ?");
-      updateValues.push(formatDate(endDate));
+      updateValues.push(endDate.toISOString().split("T")[0]); // Format as YYYY-MM-DD
     }
 
     updateValues.push(SUB_CODE);
+
     const sql = `UPDATE SUB_MAST SET ${updateFields.join(
       ", "
     )} WHERE SUB_CODE = ?`;
     const [result] = await db.query(sql, updateValues);
 
     if (result.affectedRows === 0) {
-      await db.rollback();
       return { error: "Subscription not found", statusCode: 404 };
     }
 
@@ -214,23 +207,9 @@ Subscription.updateByCode = async (SUB_CODE, updateData) => {
       [SUB_CODE]
     );
 
-    // Format date fields in the response
-    const formattedSubscription = { ...updatedSubscription[0] };
-    for (const field of dateFields) {
-      if (formattedSubscription[field]) {
-        formattedSubscription[field] = formatDate(formattedSubscription[field]);
-      }
-    }
-
-    await db.commit();
-
-    console.log("Updated subscription: ", {
-      SUB_CODE,
-      ...formattedSubscription,
-    });
-    return { data: formattedSubscription, statusCode: 200 };
+    console.log("Updated subscription: ", { SUB_CODE, ...updateData });
+    return { data: updatedSubscription, statusCode: 200 };
   } catch (err) {
-    await db.rollback();
     console.error("Error updating subscription:", err);
     return {
       error: `Error updating Subscription: ${err.message}`,
@@ -238,7 +217,6 @@ Subscription.updateByCode = async (SUB_CODE, updateData) => {
     };
   }
 };
-
 
 
 
