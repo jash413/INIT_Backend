@@ -180,13 +180,11 @@ Employee.findByMultipleCriteria = async (
 Employee.updateById = async (empId, employee) => {
   try {
     const [result] = await db.query(
-      "UPDATE EMP_MAST SET EMP_NAME = ?, EMP_MAIL = ?, EMP_PASS = ?, EMP_POSITION = ?, EMP_SALARY = ? WHERE EMP_CODE = ?",
+      "UPDATE EMP_MAST SET EMP_NAME = ?, EMP_MAIL = ?, EMP_PASS = ? WHERE EMP_CODE = ?",
       [
         employee.EMP_NAME,
         employee.EMP_MAIL,
         employee.EMP_PASS,
-        employee.EMP_POSITION,
-        employee.EMP_SALARY,
         empId,
       ]
     );
