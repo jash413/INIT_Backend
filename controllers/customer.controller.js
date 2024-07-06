@@ -1,6 +1,11 @@
 const Customer = require("../models/customer.model");
 const moment = require("moment");
 const response = require("../utils/response");
+const {
+  isValidDate,
+  createPageLink,
+  createUrl,
+} = require("../utils/pagination");
 
 // Create and Save a new Customer
 exports.create = async (req, res) => {
@@ -71,6 +76,31 @@ exports.findAll = async (req, res) => {
     const filter_from = req.query.filter_from || null;
     const filter_to = req.query.filter_to || null;
 
+    // Log query parameters
+    console.log("Query parameters:", {
+      page,
+      limit,
+      offset,
+      sort,
+      order,
+      search,
+      filter_ad_id,
+      filter_from,
+      filter_to,
+    });
+
+    // Validate date filters
+    if (filter_from && !isValidDate(filter_from)) {
+      return res
+        .status(400)
+        .json(response.error("Invalid filter_from date format"));
+    }
+    if (filter_to && !isValidDate(filter_to)) {
+      return res
+        .status(400)
+        .json(response.error("Invalid filter_to date format"));
+    }
+
     const [customers, totalCount] = await Customer.getAll(
       limit,
       offset,
@@ -84,51 +114,97 @@ exports.findAll = async (req, res) => {
     const totalPages = Math.ceil(totalCount / limit);
 
     let links = [];
-    for (let i = 1; i <= totalPages; i++) {
-      links.push({
-        url: `/api/customers?page=${i}&items_per_page=${limit}&sort=${sort}&order=${order}&search=${search}&filter_ad_id=${filter_ad_id}&filter_from=${filter_from}&filter_to=${filter_to}`,
-        label: `${i}`,
-        active: i === page,
-        page: i,
-      });
+    const maxPageLinks = 5; // Limit the number of page links
+    const startPage = Math.max(1, page - Math.floor(maxPageLinks / 2));
+    const endPage = Math.min(totalPages, startPage + maxPageLinks - 1);
+
+    for (let i = startPage; i <= endPage; i++) {
+      links.push(
+        createPageLink(
+          i,
+          page,
+          limit,
+          sort,
+          order,
+          search,
+          filter_ad_id,
+          filter_from,
+          filter_to
+        )
+      );
     }
 
     if (page > 1) {
-      links.unshift({
-        url: `/api/customers?page=${
-          page - 1
-        }&items_per_page=${limit}&sort=${sort}&order=${order}&search=${search}&filter_ad_id=${filter_ad_id}&filter_from=${filter_from}&filter_to=${filter_to}`,
-        label: "&laquo; Previous",
-        active: false,
-        page: page - 1,
-      });
+      links.unshift(
+        createPageLink(
+          page - 1,
+          page,
+          limit,
+          sort,
+          order,
+          search,
+          filter_ad_id,
+          filter_from,
+          filter_to,
+          "&laquo; Previous"
+        )
+      );
     }
     if (page < totalPages) {
-      links.push({
-        url: `/api/customers?page=${
-          page + 1
-        }&items_per_page=${limit}&sort=${sort}&order=${order}&search=${search}&filter_ad_id=${filter_ad_id}&filter_from=${filter_from}&filter_to=${filter_to}`,
-        label: "Next &raquo;",
-        active: false,
-        page: page + 1,
-      });
+      links.push(
+        createPageLink(
+          page + 1,
+          page,
+          limit,
+          sort,
+          order,
+          search,
+          filter_ad_id,
+          filter_from,
+          filter_to,
+          "Next &raquo;"
+        )
+      );
     }
 
     const paginationData = {
       page: page,
-      first_page_url: `/api/customers?page=1&items_per_page=${limit}&sort=${sort}&order=${order}&search=${search}&filter_ad_id=${filter_ad_id}&filter_from=${filter_from}&filter_to=${filter_to}`,
+      first_page_url: createUrl(
+        1,
+        limit,
+        sort,
+        order,
+        search,
+        filter_ad_id,
+        filter_from,
+        filter_to
+      ),
       last_page: totalPages,
       next_page_url:
         page < totalPages
-          ? `/api/customers?page=${
-              page + 1
-            }&items_per_page=${limit}&sort=${sort}&order=${order}&search=${search}&filter_ad_id=${filter_ad_id}&filter_from=${filter_from}&filter_to=${filter_to}`
+          ? createUrl(
+              page + 1,
+              limit,
+              sort,
+              order,
+              search,
+              filter_ad_id,
+              filter_from,
+              filter_to
+            )
           : null,
       prev_page_url:
         page > 1
-          ? `/api/customers?page=${
-              page - 1
-            }&items_per_page=${limit}&sort=${sort}&order=${order}&search=${search}&filter_ad_id=${filter_ad_id}&filter_from=${filter_from}&filter_to=${filter_to}`
+          ? createUrl(
+              page - 1,
+              limit,
+              sort,
+              order,
+              search,
+              filter_ad_id,
+              filter_from,
+              filter_to
+            )
           : null,
       items_per_page: limit,
       from: offset + 1,
@@ -149,6 +225,7 @@ exports.findAll = async (req, res) => {
       .json(response.error("An error occurred while retrieving customers."));
   }
 };
+
 
 
 // Find a single Customer with an id

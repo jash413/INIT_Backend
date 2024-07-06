@@ -59,9 +59,6 @@ Customer.create = async (newCustomer) => {
     const lastNumber = parseInt(lastCode.slice(-4));
     number = lastNumber + 1;
     }
-    console.log("Customer Name:", newCustomer.CUS_NAME);
-    console.log("Name Parts:", nameParts);
-    console.log("Initials:", initials);
 
   newCustomer.CUS_CODE = `${initials}${number.toString().padStart(4, "0")}`;
 
@@ -242,8 +239,8 @@ Customer.getAll = async (
       }
       if (filter_to) {
         filters.push(" CREATED_AT <= ?");
-        params.push(filter_to);
-        countParams.push(filter_to);
+        params.push(`${filter_to} 23:59:59`);
+        countParams.push(`${filter_to} 23:59:59`);
       }
 
       query += filters.join(" AND ");
@@ -273,6 +270,7 @@ Customer.getAll = async (
     query += " LIMIT ? OFFSET ?";
     params.push(parseInt(limit), parseInt(offset));
 
+
     // Execute queries
     const [customers] = await db.query(query, params);
     const [countResult] = await db.query(countQuery, countParams);
@@ -284,6 +282,8 @@ Customer.getAll = async (
     throw err;
   }
 };
+
+
 
 
 
