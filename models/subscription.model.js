@@ -291,8 +291,8 @@ Subscription.getAll = async (
   order,
   search,
   filter_plan_id,
-  filter_start_from,
-  filter_start_to
+  filter_created_from,
+  filter_created_to
 ) => {
   try {
     let query = "SELECT * FROM SUB_MAST";
@@ -311,34 +311,31 @@ Subscription.getAll = async (
     }
 
     // Handle filters
-    if (filter_plan_id || filter_start_from || filter_start_to) {
-      if (!search) {
-        query += " WHERE";
-        countQuery += " WHERE";
+    const filters = [];
+    if (filter_plan_id) {
+      filters.push("plan_id = ?");
+      params.push(filter_plan_id);
+      countParams.push(filter_plan_id);
+    }
+    if (filter_created_from) {
+      filters.push("CREATED_AT >= ?");
+      params.push(filter_created_from);
+      countParams.push(filter_created_from);
+    }
+    if (filter_created_to) {
+      filters.push("CREATED_AT <= ?");
+      params.push(`${filter_created_to} 23:59:59`);
+      countParams.push(`${filter_created_to} 23:59:59`);
+    }
+
+    if (filters.length > 0) {
+      if (search) {
+        query += " AND " + filters.join(" AND ");
+        countQuery += " AND " + filters.join(" AND ");
       } else {
-        query += " AND";
-        countQuery += " AND";
+        query += " WHERE " + filters.join(" AND ");
+        countQuery += " WHERE " + filters.join(" AND ");
       }
-
-      const filters = [];
-      if (filter_plan_id) {
-        filters.push(" plan_id = ?");
-        params.push(filter_plan_id);
-        countParams.push(filter_plan_id);
-      }
-      if (filter_start_from) {
-        filters.push(" START_DATE >= ?");
-        params.push(filter_start_from);
-        countParams.push(filter_start_from);
-      }
-      if (filter_start_to) {
-        filters.push(" START_DATE <= ?");
-        params.push(filter_start_to);
-        countParams.push(filter_start_to);
-      }
-
-      query += filters.join(" AND ");
-      countQuery += filters.join(" AND ");
     }
 
     // Handle sorting
@@ -351,6 +348,7 @@ Subscription.getAll = async (
         "END_DATE",
         "SUB_PLAN",
         "SUB_STATUS",
+        "CREATED_AT",
       ].includes(sort.toUpperCase())
     ) {
       query += ` ORDER BY ${sort} ${
@@ -375,6 +373,7 @@ Subscription.getAll = async (
     throw err;
   }
 };
+
 
 
 

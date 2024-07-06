@@ -64,6 +64,18 @@ exports.findAll = async (req, res) => {
     const filter_joined_from = req.query.filter_joined_from || null;
     const filter_joined_to = req.query.filter_joined_to || null;
 
+    // Validate date filters
+    if (filter_joined_from && !isValidDate(filter_joined_from)) {
+      return res
+        .status(400)
+        .json(response.error("Invalid filter_joined_from date format"));
+    }
+    if (filter_joined_to && !isValidDate(filter_joined_to)) {
+      return res
+        .status(400)
+        .json(response.error("Invalid filter_joined_to date format"));
+    }
+
     const [employees, totalCount] = await Employee.getAll(
       limit,
       offset,
@@ -142,6 +154,13 @@ exports.findAll = async (req, res) => {
       .json(response.error("An error occurred while retrieving employees."));
   }
 };
+
+// Helper function to validate date format
+const isValidDate = (dateString) => {
+  const regex = /^\d{4}-\d{2}-\d{2}$/;
+  return dateString.match(regex) !== null;
+};
+
 
 
 // Find a single Employee with an id

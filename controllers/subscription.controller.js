@@ -57,8 +57,20 @@ exports.findAll = async (req, res) => {
     const order = req.query.order || "asc";
     const search = req.query.search || "";
     const filter_plan_id = req.query.filter_plan_id || null;
-    const filter_start_from = req.query.filter_start_from || null;
-    const filter_start_to = req.query.filter_start_to || null;
+    const filter_created_from = req.query.filter_created_from || null;
+    const filter_created_to = req.query.filter_created_to || null;
+
+    // Validate date filters
+    if (filter_created_from && !isValidDate(filter_created_from)) {
+      return res
+        .status(400)
+        .json(response.error("Invalid filter_created_from date format"));
+    }
+    if (filter_created_to && !isValidDate(filter_created_to)) {
+      return res
+        .status(400)
+        .json(response.error("Invalid filter_created_to date format"));
+    }
 
     const [subscriptions, totalCount] = await Subscription.getAll(
       limit,
@@ -67,15 +79,15 @@ exports.findAll = async (req, res) => {
       order,
       search,
       filter_plan_id,
-      filter_start_from,
-      filter_start_to
+      filter_created_from,
+      filter_created_to
     );
     const totalPages = Math.ceil(totalCount / limit);
 
     let links = [];
     for (let i = 1; i <= totalPages; i++) {
       links.push({
-        url: `/api/subscriptions?page=${i}&items_per_page=${limit}&sort=${sort}&order=${order}&search=${search}&filter_plan_id=${filter_plan_id}&filter_start_from=${filter_start_from}&filter_start_to=${filter_start_to}`,
+        url: `/api/subscriptions?page=${i}&items_per_page=${limit}&sort=${sort}&order=${order}&search=${search}&filter_plan_id=${filter_plan_id}&filter_created_from=${filter_created_from}&filter_created_to=${filter_created_to}`,
         label: `${i}`,
         active: i === page,
         page: i,
@@ -86,7 +98,7 @@ exports.findAll = async (req, res) => {
       links.unshift({
         url: `/api/subscriptions?page=${
           page - 1
-        }&items_per_page=${limit}&sort=${sort}&order=${order}&search=${search}&filter_plan_id=${filter_plan_id}&filter_start_from=${filter_start_from}&filter_start_to=${filter_start_to}`,
+        }&items_per_page=${limit}&sort=${sort}&order=${order}&search=${search}&filter_plan_id=${filter_plan_id}&filter_created_from=${filter_created_from}&filter_created_to=${filter_created_to}`,
         label: "&laquo; Previous",
         active: false,
         page: page - 1,
@@ -96,7 +108,7 @@ exports.findAll = async (req, res) => {
       links.push({
         url: `/api/subscriptions?page=${
           page + 1
-        }&items_per_page=${limit}&sort=${sort}&order=${order}&search=${search}&filter_plan_id=${filter_plan_id}&filter_start_from=${filter_start_from}&filter_start_to=${filter_start_to}`,
+        }&items_per_page=${limit}&sort=${sort}&order=${order}&search=${search}&filter_plan_id=${filter_plan_id}&filter_created_from=${filter_created_from}&filter_created_to=${filter_created_to}`,
         label: "Next &raquo;",
         active: false,
         page: page + 1,
@@ -105,19 +117,19 @@ exports.findAll = async (req, res) => {
 
     const paginationData = {
       page: page,
-      first_page_url: `/api/subscriptions?page=1&items_per_page=${limit}&sort=${sort}&order=${order}&search=${search}&filter_plan_id=${filter_plan_id}&filter_start_from=${filter_start_from}&filter_start_to=${filter_start_to}`,
+      first_page_url: `/api/subscriptions?page=1&items_per_page=${limit}&sort=${sort}&order=${order}&search=${search}&filter_plan_id=${filter_plan_id}&filter_created_from=${filter_created_from}&filter_created_to=${filter_created_to}`,
       last_page: totalPages,
       next_page_url:
         page < totalPages
           ? `/api/subscriptions?page=${
               page + 1
-            }&items_per_page=${limit}&sort=${sort}&order=${order}&search=${search}&filter_plan_id=${filter_plan_id}&filter_start_from=${filter_start_from}&filter_start_to=${filter_start_to}`
+            }&items_per_page=${limit}&sort=${sort}&order=${order}&search=${search}&filter_plan_id=${filter_plan_id}&filter_created_from=${filter_created_from}&filter_created_to=${filter_created_to}`
           : null,
       prev_page_url:
         page > 1
           ? `/api/subscriptions?page=${
               page - 1
-            }&items_per_page=${limit}&sort=${sort}&order=${order}&search=${search}&filter_plan_id=${filter_plan_id}&filter_start_from=${filter_start_from}&filter_start_to=${filter_start_to}`
+            }&items_per_page=${limit}&sort=${sort}&order=${order}&search=${search}&filter_plan_id=${filter_plan_id}&filter_created_from=${filter_created_from}&filter_created_to=${filter_created_to}`
           : null,
       items_per_page: limit,
       from: offset + 1,
@@ -140,6 +152,14 @@ exports.findAll = async (req, res) => {
       );
   }
 };
+
+// Helper function to validate date format
+const isValidDate = (dateString) => {
+  const regex = /^\d{4}-\d{2}-\d{2}$/;
+  return dateString.match(regex) !== null;
+};
+
+
 
 
 // Find a single Subscription with an id

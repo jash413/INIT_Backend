@@ -287,22 +287,61 @@ Employee.remove = async (empId) => {
     }
   }
 
-Employee.getAll = async (limit, offset, sort, order, search) => {
+Employee.getAll = async (
+  limit,
+  offset,
+  sort,
+  order,
+  search,
+  filter_dept_id,
+  filter_joined_from,
+  filter_joined_to
+) => {
   try {
     let query = "SELECT * FROM EMP_MAST";
     let countQuery = "SELECT COUNT(*) as total FROM EMP_MAST";
     let params = [];
+    let countParams = [];
 
-    // Updated search to include additional fields and corrected column names
+    // Handle search
     if (search) {
       query +=
         " WHERE CONCAT_WS('', EMP_CODE, EMP_NAME, EMP_MAIL, MOB_NMBR, EMP_IMEI, EMP_ACTV, SUB_CODE, USR_TYPE, STATUS) LIKE ?";
       countQuery +=
         " WHERE CONCAT_WS('', EMP_CODE, EMP_NAME, EMP_MAIL, MOB_NMBR, EMP_IMEI, EMP_ACTV, SUB_CODE, USR_TYPE, STATUS) LIKE ?";
       params.push(`%${search}%`);
+      countParams.push(`%${search}%`);
     }
 
-    // Updated sort validation to include all sortable fields
+    // Handle filters
+    const filters = [];
+    if (filter_dept_id) {
+      filters.push("DEPT_ID = ?");
+      params.push(filter_dept_id);
+      countParams.push(filter_dept_id);
+    }
+    if (filter_joined_from) {
+      filters.push("JOIN_DATE >= ?");
+      params.push(filter_joined_from);
+      countParams.push(filter_joined_from);
+    }
+    if (filter_joined_to) {
+      filters.push("JOIN_DATE <= ?");
+      params.push(`${filter_joined_to} 23:59:59`);
+      countParams.push(`${filter_joined_to} 23:59:59`);
+    }
+
+    if (filters.length > 0) {
+      if (search) {
+        query += " AND " + filters.join(" AND ");
+        countQuery += " AND " + filters.join(" AND ");
+      } else {
+        query += " WHERE " + filters.join(" AND ");
+        countQuery += " WHERE " + filters.join(" AND ");
+      }
+    }
+
+    // Handle sorting
     if (
       sort &&
       [
@@ -318,7 +357,7 @@ Employee.getAll = async (limit, offset, sort, order, search) => {
         "REGDATE",
         "SUB_STDT",
         "SUB_ENDT",
-        "STATUS"
+        "STATUS",
       ].includes(sort.toUpperCase())
     ) {
       query += ` ORDER BY ${sort} ${
@@ -328,14 +367,13 @@ Employee.getAll = async (limit, offset, sort, order, search) => {
       query += " ORDER BY EMP_CODE ASC"; // default sorting
     }
 
+    // Handle pagination
     query += " LIMIT ? OFFSET ?";
     params.push(parseInt(limit), parseInt(offset));
 
+    // Execute queries
     const [employees] = await db.query(query, params);
-    const [countResult] = await db.query(
-      countQuery,
-      search ? [`%${search}%`] : []
-    );
+    const [countResult] = await db.query(countQuery, countParams);
     const totalCount = countResult[0].total;
 
     return [employees, totalCount];
@@ -344,5 +382,7 @@ Employee.getAll = async (limit, offset, sort, order, search) => {
     throw err;
   }
 };
+
+
 
 module.exports = Employee;
