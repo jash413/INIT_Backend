@@ -293,9 +293,9 @@ Employee.getAll = async (
   sort,
   order,
   search,
-  filter_dept_id,
-  filter_joined_from,
-  filter_joined_to
+  filter_ad_id,
+  filter_from,
+  filter_to
 ) => {
   try {
     let query = "SELECT * FROM EMP_MAST";
@@ -306,39 +306,40 @@ Employee.getAll = async (
     // Handle search
     if (search) {
       query +=
-        " WHERE CONCAT_WS('', EMP_CODE, EMP_NAME, EMP_MAIL, MOB_NMBR, EMP_IMEI, EMP_ACTV, SUB_CODE, USR_TYPE, STATUS) LIKE ?";
+        " WHERE CONCAT_WS('', EMP_CODE, EMP_NAME, EMP_MAIL, CUS_CODE) LIKE ?";
       countQuery +=
-        " WHERE CONCAT_WS('', EMP_CODE, EMP_NAME, EMP_MAIL, MOB_NMBR, EMP_IMEI, EMP_ACTV, SUB_CODE, USR_TYPE, STATUS) LIKE ?";
+        " WHERE CONCAT_WS('', EMP_CODE, EMP_NAME, EMP_MAIL, CUS_CODE) LIKE ?";
       params.push(`%${search}%`);
       countParams.push(`%${search}%`);
     }
 
     // Handle filters
-    const filters = [];
-    if (filter_dept_id) {
-      filters.push("DEPT_ID = ?");
-      params.push(filter_dept_id);
-      countParams.push(filter_dept_id);
-    }
-    if (filter_joined_from) {
-      filters.push("JOIN_DATE >= ?");
-      params.push(filter_joined_from);
-      countParams.push(filter_joined_from);
-    }
-    if (filter_joined_to) {
-      filters.push("JOIN_DATE <= ?");
-      params.push(`${filter_joined_to} 23:59:59`);
-      countParams.push(`${filter_joined_to} 23:59:59`);
-    }
-
-    if (filters.length > 0) {
-      if (search) {
-        query += " AND " + filters.join(" AND ");
-        countQuery += " AND " + filters.join(" AND ");
+    if (filter_ad_id || filter_from || filter_to) {
+      if (!search) {
+        query += " WHERE";
+        countQuery += " WHERE";
       } else {
-        query += " WHERE " + filters.join(" AND ");
-        countQuery += " WHERE " + filters.join(" AND ");
+        query += " AND";
+        countQuery += " AND";
       }
+      const filters = [];
+      if (filter_ad_id) {
+        filters.push(" ad_id = ?");
+        params.push(filter_ad_id);
+        countParams.push(filter_ad_id);
+      }
+      if (filter_from) {
+        filters.push(" CREATED_AT >= ?");
+        params.push(filter_from);
+        countParams.push(filter_from);
+      }
+      if (filter_to) {
+        filters.push(" CREATED_AT <= ?");
+        params.push(`${filter_to} 23:59:59`);
+        countParams.push(`${filter_to} 23:59:59`);
+      }
+      query += filters.join(" AND ");
+      countQuery += filters.join(" AND ");
     }
 
     // Handle sorting
@@ -348,16 +349,9 @@ Employee.getAll = async (
         "EMP_CODE",
         "EMP_NAME",
         "EMP_MAIL",
-        "MOB_NMBR",
-        "EMP_IMEI",
-        "EMP_ACTV",
-        "SYN_DATE",
-        "SUB_CODE",
-        "USR_TYPE",
-        "REGDATE",
-        "SUB_STDT",
-        "SUB_ENDT",
+        "CUS_CODE",
         "STATUS",
+        "CREATED_AT",
       ].includes(sort.toUpperCase())
     ) {
       query += ` ORDER BY ${sort} ${
@@ -375,13 +369,13 @@ Employee.getAll = async (
     const [employees] = await db.query(query, params);
     const [countResult] = await db.query(countQuery, countParams);
     const totalCount = countResult[0].total;
-
     return [employees, totalCount];
   } catch (err) {
     console.error("Error retrieving employees:", err);
     throw err;
   }
 };
+
 
 
 

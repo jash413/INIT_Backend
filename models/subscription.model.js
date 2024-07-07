@@ -1,5 +1,5 @@
-const db = require('../utils/db.js');
-const response =require('../utils/response.js')
+const db = require("../utils/db.js");
+const response = require("../utils/response.js");
 
 const Subscription = function (subscription) {
   this.SUB_CODE = subscription.SUB_CODE;
@@ -20,7 +20,10 @@ Subscription.create = async (newSubscription) => {
   try {
     // Convert all string values in newSubscription to uppercase
     for (const key in newSubscription) {
-      if (typeof newSubscription[key] === 'string' && (newSubscription[key].constructor === String)) {
+      if (
+        typeof newSubscription[key] === "string" &&
+        newSubscription[key].constructor === String
+      ) {
         newSubscription[key] = newSubscription[key].toUpperCase();
       }
     }
@@ -135,7 +138,6 @@ Subscription.findById = async (subId) => {
   }
 };
 
-
 // Update Subscription by id
 Subscription.updateByCode = async (SUB_CODE, updateData) => {
   const allowedFields = [
@@ -241,10 +243,6 @@ Subscription.updateByCode = async (SUB_CODE, updateData) => {
   }
 };
 
-
-
-
-
 // Delete Subscription by id
 Subscription.remove = async (subId, cusCode) => {
   try {
@@ -282,7 +280,6 @@ Subscription.remove = async (subId, cusCode) => {
   }
 };
 
-
 // Retrieve all Subscriptions
 Subscription.getAll = async (
   limit,
@@ -290,9 +287,9 @@ Subscription.getAll = async (
   sort,
   order,
   search,
-  filter_plan_id,
-  filter_created_from,
-  filter_created_to
+  filter_ad_id,
+  filter_from,
+  filter_to
 ) => {
   try {
     let query = "SELECT * FROM SUB_MAST";
@@ -303,39 +300,40 @@ Subscription.getAll = async (
     // Handle search
     if (search) {
       query +=
-        " WHERE CONCAT_WS('', SUB_CODE, CUS_NAME, SUB_PLAN, SUB_STATUS) LIKE ?";
+        " WHERE CONCAT_WS('', SUB_CODE, CUS_CODE, PLA_CODE, SUB_ORDN) LIKE ?";
       countQuery +=
-        " WHERE CONCAT_WS('', SUB_CODE, CUS_NAME, SUB_PLAN, SUB_STATUS) LIKE ?";
+        " WHERE CONCAT_WS('', SUB_CODE, CUS_CODE, PLA_CODE, SUB_ORDN) LIKE ?";
       params.push(`%${search}%`);
       countParams.push(`%${search}%`);
     }
 
     // Handle filters
-    const filters = [];
-    if (filter_plan_id) {
-      filters.push("plan_id = ?");
-      params.push(filter_plan_id);
-      countParams.push(filter_plan_id);
-    }
-    if (filter_created_from) {
-      filters.push("CREATED_AT >= ?");
-      params.push(filter_created_from);
-      countParams.push(filter_created_from);
-    }
-    if (filter_created_to) {
-      filters.push("CREATED_AT <= ?");
-      params.push(`${filter_created_to} 23:59:59`);
-      countParams.push(`${filter_created_to} 23:59:59`);
-    }
-
-    if (filters.length > 0) {
-      if (search) {
-        query += " AND " + filters.join(" AND ");
-        countQuery += " AND " + filters.join(" AND ");
+    if (filter_ad_id || filter_from || filter_to) {
+      if (!search) {
+        query += " WHERE";
+        countQuery += " WHERE";
       } else {
-        query += " WHERE " + filters.join(" AND ");
-        countQuery += " WHERE " + filters.join(" AND ");
+        query += " AND";
+        countQuery += " AND";
       }
+      const filters = [];
+      if (filter_ad_id) {
+        filters.push(" ad_id = ?");
+        params.push(filter_ad_id);
+        countParams.push(filter_ad_id);
+      }
+      if (filter_from) {
+        filters.push(" CREATED_AT >= ?");
+        params.push(filter_from);
+        countParams.push(filter_from);
+      }
+      if (filter_to) {
+        filters.push(" CREATED_AT <= ?");
+        params.push(`${filter_to} 23:59:59`);
+        countParams.push(`${filter_to} 23:59:59`);
+      }
+      query += filters.join(" AND ");
+      countQuery += filters.join(" AND ");
     }
 
     // Handle sorting
@@ -343,12 +341,13 @@ Subscription.getAll = async (
       sort &&
       [
         "SUB_CODE",
-        "CUS_NAME",
-        "START_DATE",
-        "END_DATE",
-        "SUB_PLAN",
-        "SUB_STATUS",
-        "CREATED_AT",
+        "CUS_CODE",
+        "PLA_CODE",
+        "SUB_STDT",
+        "SUB_ENDT",
+        "SUB_PDAT",
+        "SUB_ORDN",
+        "status",
       ].includes(sort.toUpperCase())
     ) {
       query += ` ORDER BY ${sort} ${
@@ -366,15 +365,11 @@ Subscription.getAll = async (
     const [subscriptions] = await db.query(query, params);
     const [countResult] = await db.query(countQuery, countParams);
     const totalCount = countResult[0].total;
-
     return [subscriptions, totalCount];
   } catch (err) {
     console.error("Error retrieving subscriptions:", err);
     throw err;
   }
 };
-
-
-
 
 module.exports = Subscription;
