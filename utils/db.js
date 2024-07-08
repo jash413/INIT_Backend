@@ -13,5 +13,15 @@ const pool = mysql.createPool({
   queueLimit: 0,
 });
 
+// Check if the pool has successfully connected
+pool.getConnection((err, connection) => {
+  if (err) {
+    console.error('Error connecting to MySQL:', err);
+    return;
+  }
+  console.log('MySQL connected successfully!');
+  connection.release(); // Release the connection
+});
+
 // Export the pool with promises enabled
 module.exports = pool.promise();
