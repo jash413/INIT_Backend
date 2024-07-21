@@ -71,7 +71,7 @@ Subscription.create = async (newSubscription) => {
       SUB_ENDT: endDate.toISOString().split("T")[0],
       LIC_USER: newSubscription.LIC_USER,
       SUB_ORDN: newSubscription.SUB_ORDN,
-      status: newSubscription.status || 1,
+      status: newSubscription.status || 0,
       ORD_REQD: newSubscription.ORD_REQD,
       ad_id: newSubscription.ad_id,
       INV_DATE: newSubscription.INV_DATE,
