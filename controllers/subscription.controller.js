@@ -130,7 +130,7 @@ exports.findAll = async (req, res) => {
           filter_ad_id,
           filter_from,
           filter_to,
-          "&laquo; Previous"
+          "Previous"
         )
       );
     }
@@ -146,7 +146,7 @@ exports.findAll = async (req, res) => {
           filter_ad_id,
           filter_from,
           filter_to,
-          "Next &raquo;"
+          "Next"
         )
       );
     }
