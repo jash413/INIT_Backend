@@ -134,7 +134,7 @@ exports.findAll = async (req, res) => {
           filter_ad_id,
           filter_from,
           filter_to,
-          "&laquo; Previous"
+          "Previous"
         )
       );
     }
@@ -150,7 +150,7 @@ exports.findAll = async (req, res) => {
           filter_ad_id,
           filter_from,
           filter_to,
-          "Next &raquo;"
+          "Next"
         )
       );
     }
@@ -214,7 +214,7 @@ exports.findAll = async (req, res) => {
   }
 };
 
-// Helper function to validate date format
+// Helper functions remain the same
 const createPageLink = (
   pageNum,
   currentPage,
@@ -284,9 +284,6 @@ const isValidDate = (dateString) => {
   );
 };
 
-
-
-
 // Find a single Employee with an id
 exports.findOne = async (req, res) => {
   try {
@@ -353,7 +350,6 @@ exports.findOne = async (req, res) => {
   }
 };
 
-
 // Update an Employee identified by the id in the request
 exports.update = async (req, res) => {
   try {
@@ -378,7 +374,6 @@ exports.update = async (req, res) => {
       );
   }
 };
-
 
 // Delete an Employee with the specified id in the request
 exports.delete = async (req, res) => {

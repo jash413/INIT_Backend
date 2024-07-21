@@ -1,11 +1,7 @@
 const Customer = require("../models/customer.model");
 const moment = require("moment");
 const response = require("../utils/response");
-const {
-  isValidDate,
-  createPageLink,
-  createUrl,
-} = require("../utils/pagination");
+
 
 // Create and Save a new Customer
 exports.create = async (req, res) => {
@@ -146,7 +142,7 @@ exports.findAll = async (req, res) => {
           filter_ad_id,
           filter_from,
           filter_to,
-          "&laquo; Previous"
+          "Previous"
         )
       );
     }
@@ -162,7 +158,7 @@ exports.findAll = async (req, res) => {
           filter_ad_id,
           filter_from,
           filter_to,
-          "Next &raquo;"
+          "Next"
         )
       );
     }
@@ -222,8 +218,80 @@ exports.findAll = async (req, res) => {
     console.error("Error in findAll:", err);
     res
       .status(500)
-      .json(response.error("An error occurred while retrieving customers."));
+      .json(
+        response.error("An error occurred while retrieving customers.")
+      );
   }
+};
+
+// Helper functions (add these if they're not already present)
+const createPageLink = (
+  pageNum,
+  currentPage,
+  limit,
+  sort,
+  order,
+  search,
+  filter_ad_id,
+  filter_from,
+  filter_to,
+  label = null
+) => {
+  return {
+    url: createUrl(
+      pageNum,
+      limit,
+      sort,
+      order,
+      search,
+      filter_ad_id,
+      filter_from,
+      filter_to
+    ),
+    label: label || `${pageNum}`,
+    active: pageNum === currentPage,
+    page: pageNum,
+  };
+};
+
+const createUrl = (
+  page,
+  limit,
+  sort,
+  order,
+  search,
+  filter_ad_id,
+  filter_from,
+  filter_to
+) => {
+  const params = new URLSearchParams({
+    page: page.toString(),
+    items_per_page: limit.toString(),
+    sort,
+    order,
+    search: encodeURIComponent(search),
+  });
+
+  if (filter_ad_id) params.append("filter_ad_id", filter_ad_id);
+  if (filter_from) params.append("filter_from", filter_from);
+  if (filter_to) params.append("filter_to", filter_to);
+
+  return `/api/customers?${params.toString()}`;
+};
+
+const isValidDate = (dateString) => {
+  // This regex allows for dates in the format YYYY-MM-DD or YYYY-DD-MM
+  const regex = /^\d{4}-(0[1-9]|1[0-2]|[1-3]\d)-(0[1-9]|[12]\d|3[01])$/;
+  if (!regex.test(dateString)) return false;
+
+  const [year, month, day] = dateString.split("-").map(Number);
+  const date = new Date(year, month - 1, day);
+
+  return (
+    date.getFullYear() === year &&
+    date.getMonth() === month - 1 &&
+    date.getDate() === day
+  );
 };
 
 
