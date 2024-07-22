@@ -39,7 +39,7 @@ exports.create = async (req, res) => {
       client_id: req.body.client_id,
       client_secret: req.body.client_secret,
       database_name: req.body.database_name,
-      is_active: req.body.is_active,
+      is_active: req.body.is_active || 0,
       app_key: req.body.app_key,
       reg_type_id: req.body.reg_type_id,
       ad_id: req.user.id, // Set ad_id from req.user

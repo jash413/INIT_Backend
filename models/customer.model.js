@@ -14,7 +14,7 @@ const Customer = function (customer) {
   this.CUS_ADDR = customer.CUS_ADDR;
   this.PHO_NMBR = customer.PHO_NMBR;
   this.CUS_REFB = customer.CUS_REFB;
-  this.is_active = 1;
+  this.is_active = customer.is_active;
   this.ad_id = customer.ad_id; // Include ad_id from req.user
 };
 
