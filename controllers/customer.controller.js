@@ -2,7 +2,6 @@ const Customer = require("../models/customer.model");
 const moment = require("moment");
 const response = require("../utils/response");
 
-
 // Create and Save a new Customer
 exports.create = async (req, res) => {
   try {
@@ -39,7 +38,7 @@ exports.create = async (req, res) => {
       client_id: req.body.client_id,
       client_secret: req.body.client_secret,
       database_name: req.body.database_name,
-       is_active: req.body.is_active !== undefined ? req.body.is_active : 0,
+      is_active: req.body.is_active !== undefined ? req.body.is_active : 0,
       app_key: req.body.app_key,
       reg_type_id: req.body.reg_type_id,
       ad_id: req.user.id, // Set ad_id from req.user
@@ -58,21 +57,50 @@ exports.create = async (req, res) => {
   }
 };
 
+const getTotalCustomerCount = async (
+  search,
+  filter_ad_id,
+  filter_from,
+  filter_to
+) => {
+  try {
+    // Assuming Customer.getCount is a method that fetches the total count
+    const [result] = await Customer.getCount(
+      search,
+      filter_ad_id,
+      filter_from,
+      filter_to
+    );
+    return result.totalCount; // Adjust based on your actual result structure
+  } catch (err) {
+    console.error("Error getting total customer count:", err);
+    throw new Error("Unable to get total customer count");
+  }
+};
 
 // Retrieve all Customers from the database
 exports.findAll = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.items_per_page) || 10;
+    let limit = parseInt(req.query.items_per_page) || 0;
     const offset = (page - 1) * limit;
     const sort = req.query.sort || "created_at";
-    const order = req.query.order || "asc";
+    const order = req.query.order || "desc";
     const search = req.query.search || "";
-    const filter_ad_id = req.query.filter_ad_id || null;
     const filter_from = req.query.filter_from || null;
     const filter_to = req.query.filter_to || null;
 
-
+    // Log query parameters
+    console.log("Query parameters:", {
+      page,
+      limit,
+      offset,
+      sort,
+      order,
+      search,
+      filter_from,
+      filter_to,
+    });
 
     // Validate date filters
     if (filter_from && !isValidDate(filter_from)) {
@@ -86,117 +114,123 @@ exports.findAll = async (req, res) => {
         .json(response.error("Invalid filter_to date format"));
     }
 
-    const [customers, totalCount] = await Customer.getAll(
+    // If limit is not specified or set to 0, fetch all records without pagination
+    let totalCount;
+    if (limit === 0 || limit === null) {
+      totalCount = await getTotalCustomerCount(search, filter_from, filter_to);
+      limit = totalCount;
+    }
+
+    const customers = await Customer.getAll(
       limit,
       offset,
       sort,
       order,
       search,
-      filter_ad_id,
       filter_from,
       filter_to
     );
-    const totalPages = Math.ceil(totalCount / limit);
 
-    let links = [];
-    const maxPageLinks = 5; // Limit the number of page links
-    const startPage = Math.max(1, page - Math.floor(maxPageLinks / 2));
-    const endPage = Math.min(totalPages, startPage + maxPageLinks - 1);
+    // If limit is not specified or set to fetch all records, set pagination data accordingly
+    let paginationData = {};
+    if (limit !== null) {
+      totalCount = totalCount || customers.length;
+      const totalPages = Math.ceil(totalCount / (limit || 1));
 
-    for (let i = startPage; i <= endPage; i++) {
-      links.push(
-        createPageLink(
-          i,
-          page,
+      let links = [];
+      const maxPageLinks = 5; // Limit the number of page links
+      const startPage = Math.max(1, page - Math.floor(maxPageLinks / 2));
+      const endPage = Math.min(totalPages, startPage + maxPageLinks - 1);
+
+      for (let i = startPage; i <= endPage; i++) {
+        links.push(
+          createPageLink(
+            i,
+            page,
+            limit,
+            sort,
+            order,
+            search,
+            filter_from,
+            filter_to
+          )
+        );
+      }
+
+      if (page > 1) {
+        links.unshift(
+          createPageLink(
+            page - 1,
+            page,
+            limit,
+            sort,
+            order,
+            search,
+            filter_from,
+            filter_to,
+            "Previous"
+          )
+        );
+      }
+      if (page < totalPages) {
+        links.push(
+          createPageLink(
+            page + 1,
+            page,
+            limit,
+            sort,
+            order,
+            search,
+            filter_from,
+            filter_to,
+            "Next"
+          )
+        );
+      }
+
+      paginationData = {
+        page: page,
+        first_page_url: createUrl(
+          1,
           limit,
           sort,
           order,
           search,
-          filter_ad_id,
           filter_from,
           filter_to
-        )
-      );
+        ),
+        last_page: totalPages,
+        next_page_url:
+          page < totalPages
+            ? createUrl(
+                page + 1,
+                limit,
+                sort,
+                order,
+                search,
+                filter_from,
+                filter_to
+              )
+            : null,
+        prev_page_url:
+          page > 1
+            ? createUrl(
+                page - 1,
+                limit,
+                sort,
+                order,
+                search,
+                filter_from,
+                filter_to
+              )
+            : null,
+        items_per_page: limit,
+        from: offset + 1,
+        to: offset + customers.length,
+        total: totalCount,
+        links,
+      };
     }
-
-    if (page > 1) {
-      links.unshift(
-        createPageLink(
-          page - 1,
-          page,
-          limit,
-          sort,
-          order,
-          search,
-          filter_ad_id,
-          filter_from,
-          filter_to,
-          "Previous"
-        )
-      );
-    }
-    if (page < totalPages) {
-      links.push(
-        createPageLink(
-          page + 1,
-          page,
-          limit,
-          sort,
-          order,
-          search,
-          filter_ad_id,
-          filter_from,
-          filter_to,
-          "Next"
-        )
-      );
-    }
-
-    const paginationData = {
-      page: page,
-      first_page_url: createUrl(
-        1,
-        limit,
-        sort,
-        order,
-        search,
-        filter_ad_id,
-        filter_from,
-        filter_to
-      ),
-      last_page: totalPages,
-      next_page_url:
-        page < totalPages
-          ? createUrl(
-              page + 1,
-              limit,
-              sort,
-              order,
-              search,
-              filter_ad_id,
-              filter_from,
-              filter_to
-            )
-          : null,
-      prev_page_url:
-        page > 1
-          ? createUrl(
-              page - 1,
-              limit,
-              sort,
-              order,
-              search,
-              filter_ad_id,
-              filter_from,
-              filter_to
-            )
-          : null,
-      items_per_page: limit,
-      from: offset + 1,
-      to: offset + customers.length,
-      total: totalCount,
-      links,
-    };
 
     res.json(
       response.success("Customers retrieved successfully", customers, {
@@ -207,9 +241,7 @@ exports.findAll = async (req, res) => {
     console.error("Error in findAll:", err);
     res
       .status(500)
-      .json(
-        response.error("An error occurred while retrieving customers.")
-      );
+      .json(response.error("An error occurred while retrieving customers."));
   }
 };
 
@@ -282,8 +314,6 @@ const isValidDate = (dateString) => {
     date.getDate() === day
   );
 };
-
-
 
 // Find a single Customer with an id
 exports.findOne = async (req, res) => {
@@ -382,9 +412,7 @@ exports.delete = async (req, res) => {
       case "notFound":
         return res.status(404).json(response.notFound(result.message));
       case "success":
-        return res
-          .status(200)
-          .json(response.success(result.message, []));
+        return res.status(200).json(response.success(result.message, []));
       case "error":
       default:
         return res.status(500).json(response.error(result.message));

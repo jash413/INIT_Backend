@@ -47,16 +47,36 @@ exports.create = async (req, res) => {
   }
 };
 
+const getTotalsubscriptionCount = async (
+  search,
+  filter_ad_id,
+  filter_from,
+  filter_to
+) => {
+  try {
+    // Assuming subscription.getCount is a method that fetches the total count
+    const [result] = await Subscription.getCount(
+      search,
+      filter_ad_id,
+      filter_from,
+      filter_to
+    );
+    return result.totalCount; // Adjust based on your actual result structure
+  } catch (err) {
+    console.error("Error getting total subscription count:", err);
+    throw new Error("Unable to get total subscription count");
+  }
+};
+
 // Retrieve all Subscriptions from the database
 exports.findAll = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.items_per_page) || 10;
+    let limit = parseInt(req.query.items_per_page) || 0;
     const offset = (page - 1) * limit;
-    const sort = req.query.sort || "CREATED_AT";
+    const sort = req.query.sort || "created_at";
     const order = req.query.order || "desc";
     const search = req.query.search || "";
-    const filter_ad_id = req.query.filter_ad_id || null;
     const filter_from = req.query.filter_from || null;
     const filter_to = req.query.filter_to || null;
 
@@ -68,7 +88,6 @@ exports.findAll = async (req, res) => {
       sort,
       order,
       search,
-      filter_ad_id,
       filter_from,
       filter_to,
     });
@@ -85,117 +104,123 @@ exports.findAll = async (req, res) => {
         .json(response.error("Invalid filter_to date format"));
     }
 
-    const [subscriptions, totalCount] = await Subscription.getAll(
+    // If limit is not specified or set to 0, fetch all records without pagination
+    let totalCount;
+    if (limit === 0 || limit === null) {
+      totalCount = await getTotalsubscriptionCount(search, filter_from, filter_to);
+      limit = totalCount;
+    }
+
+    const subscriptions = await Subscription.getAll(
       limit,
       offset,
       sort,
       order,
       search,
-      filter_ad_id,
       filter_from,
       filter_to
     );
-    const totalPages = Math.ceil(totalCount / limit);
 
-    let links = [];
-    const maxPageLinks = 5; // Limit the number of page links
-    const startPage = Math.max(1, page - Math.floor(maxPageLinks / 2));
-    const endPage = Math.min(totalPages, startPage + maxPageLinks - 1);
+    // If limit is not specified or set to fetch all records, set pagination data accordingly
+    let paginationData = {};
+    if (limit !== null) {
+      totalCount = totalCount || subscriptions.length;
+      const totalPages = Math.ceil(totalCount / (limit || 1));
 
-    for (let i = startPage; i <= endPage; i++) {
-      links.push(
-        createPageLink(
-          i,
-          page,
+      let links = [];
+      const maxPageLinks = 5; // Limit the number of page links
+      const startPage = Math.max(1, page - Math.floor(maxPageLinks / 2));
+      const endPage = Math.min(totalPages, startPage + maxPageLinks - 1);
+
+      for (let i = startPage; i <= endPage; i++) {
+        links.push(
+          createPageLink(
+            i,
+            page,
+            limit,
+            sort,
+            order,
+            search,
+            filter_from,
+            filter_to
+          )
+        );
+      }
+
+      if (page > 1) {
+        links.unshift(
+          createPageLink(
+            page - 1,
+            page,
+            limit,
+            sort,
+            order,
+            search,
+            filter_from,
+            filter_to,
+            "Previous"
+          )
+        );
+      }
+      if (page < totalPages) {
+        links.push(
+          createPageLink(
+            page + 1,
+            page,
+            limit,
+            sort,
+            order,
+            search,
+            filter_from,
+            filter_to,
+            "Next"
+          )
+        );
+      }
+
+      paginationData = {
+        page: page,
+        first_page_url: createUrl(
+          1,
           limit,
           sort,
           order,
           search,
-          filter_ad_id,
           filter_from,
           filter_to
-        )
-      );
+        ),
+        last_page: totalPages,
+        next_page_url:
+          page < totalPages
+            ? createUrl(
+                page + 1,
+                limit,
+                sort,
+                order,
+                search,
+                filter_from,
+                filter_to
+              )
+            : null,
+        prev_page_url:
+          page > 1
+            ? createUrl(
+                page - 1,
+                limit,
+                sort,
+                order,
+                search,
+                filter_from,
+                filter_to
+              )
+            : null,
+        items_per_page: limit,
+        from: offset + 1,
+        to: offset + subscriptions.length,
+        total: totalCount,
+        links,
+      };
     }
-
-    if (page > 1) {
-      links.unshift(
-        createPageLink(
-          page - 1,
-          page,
-          limit,
-          sort,
-          order,
-          search,
-          filter_ad_id,
-          filter_from,
-          filter_to,
-          "Previous"
-        )
-      );
-    }
-    if (page < totalPages) {
-      links.push(
-        createPageLink(
-          page + 1,
-          page,
-          limit,
-          sort,
-          order,
-          search,
-          filter_ad_id,
-          filter_from,
-          filter_to,
-          "Next"
-        )
-      );
-    }
-
-    const paginationData = {
-      page: page,
-      first_page_url: createUrl(
-        1,
-        limit,
-        sort,
-        order,
-        search,
-        filter_ad_id,
-        filter_from,
-        filter_to
-      ),
-      last_page: totalPages,
-      next_page_url:
-        page < totalPages
-          ? createUrl(
-              page + 1,
-              limit,
-              sort,
-              order,
-              search,
-              filter_ad_id,
-              filter_from,
-              filter_to
-            )
-          : null,
-      prev_page_url:
-        page > 1
-          ? createUrl(
-              page - 1,
-              limit,
-              sort,
-              order,
-              search,
-              filter_ad_id,
-              filter_from,
-              filter_to
-            )
-          : null,
-      items_per_page: limit,
-      from: offset + 1,
-      to: offset + subscriptions.length,
-      total: totalCount,
-      links,
-    };
 
     res.json(
       response.success("Subscriptions retrieved successfully", subscriptions, {
