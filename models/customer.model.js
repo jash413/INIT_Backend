@@ -283,30 +283,37 @@ Customer.getAll = async (
 };
 
 
-Customer.getCount =async(search, filter_from, filter_to)=>{
-    const query = `
-      SELECT COUNT(*) AS totalCount
-      FROM CUSTOMERS
-      WHERE 1=1
-        ${search ? 'AND customer_name LIKE ?' : ''}
-        ${filter_from ? 'AND created_at >= ?' : ''}
-        ${filter_to ? 'AND created_at <= ?' : ''}
-    `;
-    const values = [
-      ...(search ? [`%${search}%`] : []),
-      ...(filter_from ? [filter_from] : []),
-      ...(filter_to ? [filter_to] : []),
-    ];
-    console.log(query);
-    try {
-      const [rows] = await db.query(query, values);
-      console.log(rows);
-      return rows;
-    } catch (err) {
-      console.error("Error in getCount:", err);
-      throw new Error("Unable to get count");
-    }
-}
+Customer.getCount = async (
+  search,
+  filter_subscription_id,
+  filter_from,
+  filter_to
+) => {
+  const query = `
+    SELECT COUNT(*) AS totalCount
+    FROM CUS_MAST
+    WHERE 1=1
+      ${search ? "AND customer_name LIKE ?" : ""}
+      ${filter_subscription_id ? "AND subscription_id = ?" : ""}
+      ${filter_from ? "AND created_at >= ?" : ""}
+      ${filter_to ? "AND created_at <= ?" : ""}
+  `;
+  const values = [
+    ...(search ? [`%${search}%`] : []),
+    ...(filter_subscription_id ? [filter_subscription_id] : []),
+    ...(filter_from ? [filter_from] : []),
+    ...(filter_to ? [filter_to] : []),
+  ];
+  console.log(query);
+  try {
+    const [rows] = await db.query(query, values);
+    console.log(rows);
+    return rows;
+  } catch (err) {
+    console.error("Error in getCount:", err);
+    throw new Error("Unable to get count");
+  }
+};
 
 
 // Delete Customer by id

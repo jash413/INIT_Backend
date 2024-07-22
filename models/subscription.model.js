@@ -138,30 +138,7 @@ Subscription.findById = async (subId) => {
   }
 };
 
-Subscription.getCount= async(search, filter_from, filter_to) => {
-    const query = `
-      SELECT COUNT(*) AS totalCount
-      FROM SUBSCRIPTIONS
-      WHERE 1=1
-        ${search ? 'AND subscription_name LIKE ?' : ''}
-        ${filter_from ? 'AND created_at >= ?' : ''}
-        ${filter_to ? 'AND created_at <= ?' : ''}
-    `;
-    const values = [
-      ...(search ? [`%${search}%`] : []),
-      ...(filter_from ? [filter_from] : []),
-      ...(filter_to ? [filter_to] : []),
-    ];
-    console.log(query);
-    try {
-      const [rows] = await db.query(query, values);
-      console.log(rows);
-      return rows;
-    } catch (err) {
-      console.error("Error in getCount:", err);
-      throw new Error("Unable to get count");
-    }
-  }
+
 
 // Update Subscription by id
 Subscription.updateByCode = async (SUB_CODE, updateData) => {
@@ -394,6 +371,38 @@ Subscription.getAll = async (
   } catch (err) {
     console.error("Error retrieving subscriptions:", err);
     throw err;
+  }
+};
+
+Subscription.getCount = async (
+  search,
+  filter_customer_id,
+  filter_from,
+  filter_to
+) => {
+  const query = `
+    SELECT COUNT(*) AS totalCount
+    FROM SUB_MAST
+    WHERE 1=1
+      ${search ? "AND subscription_name LIKE ?" : ""}
+      ${filter_customer_id ? "AND customer_id = ?" : ""}
+      ${filter_from ? "AND created_at >= ?" : ""}
+      ${filter_to ? "AND created_at <= ?" : ""}
+  `;
+  const values = [
+    ...(search ? [`%${search}%`] : []),
+    ...(filter_customer_id ? [filter_customer_id] : []),
+    ...(filter_from ? [filter_from] : []),
+    ...(filter_to ? [filter_to] : []),
+  ];
+  console.log(query);
+  try {
+    const [rows] = await db.query(query, values);
+    console.log(rows);
+    return rows;
+  } catch (err) {
+    console.error("Error in getCount:", err);
+    throw new Error("Unable to get count");
   }
 };
 
