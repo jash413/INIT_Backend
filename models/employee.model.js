@@ -113,72 +113,59 @@ Employee.findByMultipleCriteria = async (
   try {
     limit = !isNaN(parseInt(limit)) ? parseInt(limit) : 10;
     offset = !isNaN(parseInt(offset)) ? parseInt(offset) : 0;
-
     let query = "SELECT * FROM EMP_MAST";
     let countQuery = "SELECT COUNT(*) as total FROM EMP_MAST";
     let params = [];
     let countParams = [];
+    let whereClause = [];
 
+    // Handling searchId
     if (searchId) {
-      query += " WHERE EMP_CODE = ? OR CUS_CODE = ? OR SUB_CODE = ?";
-      countQuery += " WHERE EMP_CODE = ? OR CUS_CODE = ? OR SUB_CODE = ?";
+      whereClause.push("(EMP_CODE = ? OR CUS_CODE = ? OR SUB_CODE = ?)");
       params.push(searchId, searchId, searchId);
       countParams.push(searchId, searchId, searchId);
-    } else {
-      if (search) {
-        query +=
-          " WHERE CONCAT_WS('', EMP_CODE, EMP_NAME, EMP_MAIL, PHO_NMBR, EMP_ADDR) LIKE ?";
-        countQuery +=
-          " WHERE CONCAT_WS('', EMP_CODE, EMP_NAME, EMP_MAIL, PHO_NMBR, EMP_ADDR) LIKE ?";
-        params.push(`%${search}%`);
-        countParams.push(`%${search}%`);
-      }
-
-      if (cusCode) {
-        if (!search) {
-          query += " WHERE";
-          countQuery += " WHERE";
-        } else {
-          query += " AND";
-          countQuery += " AND";
-        }
-        query += " CUS_CODE = ?";
-        countQuery += " CUS_CODE = ?";
-        params.push(cusCode);
-        countParams.push(cusCode);
-      }
-
-      if (filter_dept_id || filter_joined_from || filter_joined_to) {
-        if (!search && !cusCode) {
-          query += " WHERE";
-          countQuery += " WHERE";
-        } else {
-          query += " AND";
-          countQuery += " AND";
-        }
-
-        const filters = [];
-        if (filter_dept_id) {
-          filters.push("DEPT_ID = ?");
-          params.push(filter_dept_id);
-          countParams.push(filter_dept_id);
-        }
-        if (filter_joined_from) {
-          filters.push("JOINED_AT >= ?");
-          params.push(filter_joined_from);
-          countParams.push(filter_joined_from);
-        }
-        if (filter_joined_to) {
-          filters.push("JOINED_AT <= ?");
-          params.push(filter_joined_to);
-          countParams.push(filter_joined_to);
-        }
-
-        query += filters.join(" AND ");
-        countQuery += filters.join(" AND ");
-      }
     }
 
+    // Handling search
+    if (search) {
+      whereClause.push(
+        "CONCAT_WS('', EMP_CODE, EMP_NAME, EMP_MAIL,MOB_NMBR) LIKE ?"
+      );
+      params.push(`%${search}%`);
+      countParams.push(`%${search}%`);
+    }
+
+    // Handling cusCode
+    if (cusCode) {
+      whereClause.push("CUS_CODE = ?");
+      params.push(cusCode);
+      countParams.push(cusCode);
+    }
+
+    // Handling additional filters
+    if (filter_dept_id) {
+      whereClause.push("DEPT_ID = ?");
+      params.push(filter_dept_id);
+      countParams.push(filter_dept_id);
+    }
+    if (filter_joined_from) {
+      whereClause.push("JOINED_AT >= ?");
+      params.push(filter_joined_from);
+      countParams.push(filter_joined_from);
+    }
+    if (filter_joined_to) {
+      whereClause.push("JOINED_AT <= ?");
+      params.push(filter_joined_to);
+      countParams.push(filter_joined_to);
+    }
+
+    // Combining all where clauses
+    if (whereClause.length > 0) {
+      query += " WHERE " + whereClause.join(" AND ");
+      countQuery += " WHERE " + whereClause.join(" AND ");
+    }
+
+    // Sorting
     if (
       sort &&
       [
@@ -187,7 +174,7 @@ Employee.findByMultipleCriteria = async (
         "JOINED_AT",
         "DEPT_ID",
         "EMP_MAIL",
-        "PHO_NMBR",
+        "MOB_NMBR",
       ].includes(sort.toUpperCase())
     ) {
       query += ` ORDER BY ${sort} ${
@@ -197,6 +184,7 @@ Employee.findByMultipleCriteria = async (
       query += " ORDER BY EMP_CODE ASC";
     }
 
+    // Pagination
     query += " LIMIT ? OFFSET ?";
     params.push(limit, offset);
 
@@ -204,12 +192,19 @@ Employee.findByMultipleCriteria = async (
     const [countResult] = await db.query(countQuery, countParams);
     const totalCount = countResult[0].total;
 
+    console.log("Final Query:", query);
+    console.log("Query Params:", params);
+    console.log("Count Query:", countQuery);
+    console.log("Count Params:", countParams);
+
     return [employees, totalCount];
   } catch (err) {
     console.error("Error retrieving employees:", err);
     throw err;
   }
 };
+
+
 
 
 
@@ -358,7 +353,7 @@ Employee.getAll = async (
         order.toUpperCase() === "DESC" ? "DESC" : "ASC"
       }`;
     } else {
-      query += " ORDER BY EMP_CODE ASC"; // default sorting
+      query += " ORDER BY CREATED_AT DESC"; // default sorting
     }
 
     // Handle pagination

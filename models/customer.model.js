@@ -14,7 +14,7 @@ const Customer = function (customer) {
   this.CUS_ADDR = customer.CUS_ADDR;
   this.PHO_NMBR = customer.PHO_NMBR;
   this.CUS_REFB = customer.CUS_REFB;
-  this.is_active = customer.is_active;
+  this.is_active =customer.is_active !== undefined ? Number(customer.is_active) : 1;
   this.ad_id = customer.ad_id; // Include ad_id from req.user
 };
 
@@ -65,8 +65,7 @@ Customer.create = async (newCustomer) => {
   // Format dates for MySQL
   newCustomer.INS_DATE = now.toISOString().slice(0, 19).replace("T", " ");
   newCustomer.DUE_DAYS = 30;
-  newCustomer.EXP_DATE = expirationDate.toISOString().slice(0, 10);
-  newCustomer.is_active = 1;
+    newCustomer.EXP_DATE = expirationDate.toISOString().slice(0, 10);
 
   // Insert the new customer
   const [res] = await db.query("INSERT INTO CUS_MAST SET ?", newCustomer);
@@ -263,7 +262,7 @@ Customer.getAll = async (
         order.toUpperCase() === "DESC" ? "DESC" : "ASC"
       }`;
     } else {
-      query += " ORDER BY CUS_CODE ASC"; // default sorting
+      query += " ORDER BY CREATED_AT DESC"; // default sorting
     }
 
     // Handle pagination

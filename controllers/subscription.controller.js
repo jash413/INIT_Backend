@@ -53,8 +53,8 @@ exports.findAll = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.items_per_page) || 10;
     const offset = (page - 1) * limit;
-    const sort = req.query.sort || "SUB_CODE";
-    const order = req.query.order || "asc";
+    const sort = req.query.sort || "CREATED_AT";
+    const order = req.query.order || "desc";
     const search = req.query.search || "";
     const filter_ad_id = req.query.filter_ad_id || null;
     const filter_from = req.query.filter_from || null;

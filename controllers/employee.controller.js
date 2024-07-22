@@ -57,7 +57,7 @@ exports.findAll = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.items_per_page) || 10;
     const offset = (page - 1) * limit;
-    const sort = req.query.sort || "EMP_CODE";
+    const sort = req.query.sort || "created_at";
     const order = req.query.order || "asc";
     const search = req.query.search || "";
     const filter_ad_id = req.query.filter_ad_id || null;
@@ -288,67 +288,48 @@ const isValidDate = (dateString) => {
 exports.findOne = async (req, res) => {
   try {
     const empId = req.params.empId;
+    const search = req.query.search || null;
 
-    // Attempt to find by EMP_CODE first
-    const employee = await Employee.findByEmpCode(empId);
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = parseInt(req.query.offset) || 0;
+    const sort = req.query.sort || "EMP_CODE";
+    const order = req.query.order || "ASC";
 
-    if (employee) {
-      return res
-        .status(200)
-        .send(
-          response.success("Employee retrieved successfully", employee, {}, 200)
-        );
-    } else {
-      // If not found by EMP_CODE, search by multiple criteria
-      const limit = parseInt(req.query.limit) || 10;
-      const offset = parseInt(req.query.offset) || 0;
-      const sort = req.query.sort || "EMP_CODE";
-      const order = req.query.order || "ASC";
-
-      const [employees, totalCount] = await Employee.findByMultipleCriteria(
-        limit,
-        offset,
-        sort,
-        order,
-        null, // search
-        null, // filter_dept_id
-        null, // filter_joined_from
-        null, // filter_joined_to
-        empId // searchId
-      );
-
-      if (employees.length === 0) {
-        return res
-          .status(404)
-          .send(response.error(`Employee not found with id ${empId}`, 404));
-      } else {
-        return res
-          .status(200)
-          .send(
-            response.success(
-              "Employees retrieved successfully",
-              employees,
-              { totalCount },
-              200
-            )
-          );
-      }
-    }
-  } catch (err) {
-    console.error(
-      `Error retrieving employee(s) with id ${req.params.empId}:`,
-      err
+    const [employees, totalCount] = await Employee.findByMultipleCriteria(
+      limit,
+      offset,
+      sort,
+      order,
+      search,
+      null, // filter_dept_id
+      null, // filter_joined_from
+      null, // filter_joined_to
+      empId // searchId
     );
+
+    // Always return a success response with status 200
+    return res
+      .status(200)
+      .json(
+        response.success(
+          "Employees retrieved successfully",
+          employees,
+          { totalCount },
+          200
+        )
+      );
+  } catch (err) {
+    console.error(`Error retrieving employee(s):`, err);
     return res
       .status(500)
-      .send(
-        response.error(
-          `Error retrieving employee(s) with id ${req.params.empId}: ${err.message}`,
-          500
-        )
+      .json(
+        response.error(`Error retrieving employee(s): ${err.message}`, 500)
       );
   }
 };
+
+
+
 
 // Update an Employee identified by the id in the request
 exports.update = async (req, res) => {

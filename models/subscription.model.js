@@ -354,7 +354,7 @@ Subscription.getAll = async (
         order.toUpperCase() === "DESC" ? "DESC" : "ASC"
       }`;
     } else {
-      query += " ORDER BY SUB_CODE ASC"; // default sorting
+      query += " ORDER BY CREATED_AT DESC"; // default sorting
     }
 
     // Handle pagination

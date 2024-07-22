@@ -39,7 +39,7 @@ exports.create = async (req, res) => {
       client_id: req.body.client_id,
       client_secret: req.body.client_secret,
       database_name: req.body.database_name,
-      is_active: req.body.is_active || 0,
+       is_active: req.body.is_active !== undefined ? req.body.is_active : 0,
       app_key: req.body.app_key,
       reg_type_id: req.body.reg_type_id,
       ad_id: req.user.id, // Set ad_id from req.user
@@ -65,7 +65,7 @@ exports.findAll = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.items_per_page) || 10;
     const offset = (page - 1) * limit;
-    const sort = req.query.sort || "CUS_CODE";
+    const sort = req.query.sort || "created_at";
     const order = req.query.order || "asc";
     const search = req.query.search || "";
     const filter_ad_id = req.query.filter_ad_id || null;
