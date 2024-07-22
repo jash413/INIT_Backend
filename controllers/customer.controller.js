@@ -72,18 +72,7 @@ exports.findAll = async (req, res) => {
     const filter_from = req.query.filter_from || null;
     const filter_to = req.query.filter_to || null;
 
-    // Log query parameters
-    console.log("Query parameters:", {
-      page,
-      limit,
-      offset,
-      sort,
-      order,
-      search,
-      filter_ad_id,
-      filter_from,
-      filter_to,
-    });
+
 
     // Validate date filters
     if (filter_from && !isValidDate(filter_from)) {
