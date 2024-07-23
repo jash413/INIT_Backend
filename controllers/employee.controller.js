@@ -58,21 +58,20 @@ const getTotalEmployeeCount = async (
   filter_to
 ) => {
   try {
-    // Assuming Employee.getCount is a method that fetches the total count
     const [result] = await Employee.getCount(
       search,
       filter_ad_id,
       filter_from,
       filter_to
     );
-    return result.totalCount; // Adjust based on your actual result structure
+    console.log("Total count result:", result);
+    return result.totalCount;
   } catch (err) {
     console.error("Error getting total employee count:", err);
     throw new Error("Unable to get total employee count");
   }
 };
 
-// Retrieve all Employees from the database
 exports.findAll = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
@@ -85,7 +84,6 @@ exports.findAll = async (req, res) => {
     const filter_from = req.query.filter_from || null;
     const filter_to = req.query.filter_to || null;
 
-    // Log query parameters
     console.log("Query parameters:", {
       page,
       limit,
@@ -98,7 +96,6 @@ exports.findAll = async (req, res) => {
       filter_to,
     });
 
-    // Validate date filters
     if (filter_from && !isValidDate(filter_from)) {
       return res
         .status(400)
@@ -110,7 +107,6 @@ exports.findAll = async (req, res) => {
         .json(response.error("Invalid filter_to date format"));
     }
 
-    // If limit is not specified or set to 0, fetch all records without pagination
     let totalCount;
     if (limit === 0 || limit === null) {
       totalCount = await getTotalEmployeeCount(
@@ -120,7 +116,17 @@ exports.findAll = async (req, res) => {
         filter_to
       );
       limit = totalCount;
+    } else {
+      totalCount = await getTotalEmployeeCount(
+        search,
+        filter_ad_id,
+        filter_from,
+        filter_to
+      );
     }
+
+    console.log("Total count:", totalCount);
+    console.log("Limit:", limit);
 
     const [employees] = await Employee.getAll(
       limit,
@@ -133,14 +139,15 @@ exports.findAll = async (req, res) => {
       filter_to
     );
 
-    // If limit is not specified or set to fetch all records, set pagination data accordingly
+    console.log("Employees fetched:", employees.length);
+
     let paginationData = {};
     if (limit !== null) {
       totalCount = totalCount || employees.length;
       const totalPages = Math.ceil(totalCount / (limit || 1));
 
       let links = [];
-      const maxPageLinks = 5; // Limit the number of page links
+      const maxPageLinks = 5;
       const startPage = Math.max(1, page - Math.floor(maxPageLinks / 2));
       const endPage = Math.min(totalPages, startPage + maxPageLinks - 1);
 
@@ -240,6 +247,8 @@ exports.findAll = async (req, res) => {
       };
     }
 
+    console.log("Pagination data:", paginationData);
+
     res.json(
       response.success("Employees retrieved successfully", employees, {
         pagination: paginationData,
@@ -253,7 +262,6 @@ exports.findAll = async (req, res) => {
   }
 };
 
-// Helper functions remain the same
 const createPageLink = (
   pageNum,
   currentPage,
@@ -309,7 +317,6 @@ const createUrl = (
 };
 
 const isValidDate = (dateString) => {
-  // This regex allows for dates in the format YYYY-MM-DD or YYYY-DD-MM
   const regex = /^\d{4}-(0[1-9]|1[0-2]|[1-3]\d)-(0[1-9]|[12]\d|3[01])$/;
   if (!regex.test(dateString)) return false;
 

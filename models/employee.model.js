@@ -307,7 +307,7 @@ Employee.remove = async (empId) => {
       console.error("Error deleting employee:", err);
       throw err;
     }
-  }
+}
 
 Employee.getAll = async (
   limit,
