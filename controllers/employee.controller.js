@@ -366,11 +366,7 @@ exports.findOne = async (req, res) => {
       );
   } catch (err) {
     console.error(`Error retrieving employee(s):`, err);
-    return res
-      .status(500)
-      .json(
-        response.error(`Error retrieving employee(s): ${err.message}`, 500)
-      );
+    
   }
 };
 

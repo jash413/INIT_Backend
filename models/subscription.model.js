@@ -107,7 +107,7 @@ Subscription.findById = async (subId) => {
     );
 
     if (subscriptions.length === 0) {
-      throw new Error("Subscription not found");
+      return [];
     }
 
     // Convert all string fields in the subscriptions data to uppercase

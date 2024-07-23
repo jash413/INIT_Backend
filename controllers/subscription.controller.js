@@ -333,36 +333,29 @@ const isValidDate = (dateString) => {
 
 // Find a single Subscription with an id
 exports.findOne = async (req, res) => {
-
   try {
     const data = await Subscription.findById(req.params.subId);
     console.log("Subscription retrieved successfully:", data);
+    // Change here: Always return status 200, even if the subscription is not found
     return res
       .status(200)
       .send(
         response.success("Subscription retrieved successfully", data)
       );
   } catch (err) {
-    if (err.message === "Subscription not found") {
-      console.error("Subscription not found with id:", req.params.subId);
-      return res
-        .status(404)
-        .send(response.notFound("Subscription not found"));
-    } else {
-      console.error(
-        "Error retrieving subscription with id",
-        req.params.subId,
-        ":",
-        err
+    console.error(
+      "Error retrieving subscription with id",
+      req.params.subId,
+      ":",
+      err
+    );
+    return res
+      .status(500)
+      .send(
+        response.error(
+          "Error retrieving subscription with id " + req.params.subId
+        )
       );
-      return res
-        .status(500)
-        .send(
-          response.error(
-            "Error retrieving subscription with id " + req.params.subId
-          )
-        );
-    }
   }
 };
 

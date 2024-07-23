@@ -50,14 +50,13 @@ Employee.create = async (newEmployee) => {
     const [lastEmp] = await db.query(
       "SELECT EMP_CODE FROM EMP_MAST ORDER BY EMP_CODE DESC LIMIT 1"
     );
-    let nextEmpCode = "E001"; // Default if no employees exist
+    let nextEmpCode = "E000001"; // Default if no employees exist
 
     if (lastEmp.length > 0) {
       const lastEmpCode = lastEmp[0].EMP_CODE;
       const numericPart = parseInt(lastEmpCode.substring(1)) + 1; // Extract numeric part and increment
-      nextEmpCode = `E${numericPart.toString().padStart(3, "0")}`; // Generate next EMP_CODE
+      nextEmpCode = `E${numericPart.toString().padStart(6, "0")}`; // Generate next EMP_CODE with 6 digits
     }
-
     // Add the generated EMP_CODE to newEmployee object
     newEmployee.EMP_CODE = nextEmpCode;
 
@@ -70,8 +69,6 @@ Employee.create = async (newEmployee) => {
         newEmployee[key] = newEmployee[key].toUpperCase();
       }
     }
-
-  
 
     // Insert the new employee with the generated EMP_CODE
     const [res] = await db.query("INSERT INTO EMP_MAST SET ?", newEmployee);
@@ -172,7 +169,6 @@ Employee.findByMultipleCriteria = async (
         "EMP_CODE",
         "EMP_NAME",
         "JOINED_AT",
-        "DEPT_ID",
         "EMP_MAIL",
         "MOB_NMBR",
       ].includes(sort.toUpperCase())
@@ -264,33 +260,36 @@ Employee.updateById = async (empId, employee) => {
 };
 
 Employee.getCount = async (search, filter_ad_id, filter_from, filter_to) => {
-  // Implement the query to count the total number of employees
+  // Construct the query to count the total number of employees
   const query = `
     SELECT COUNT(*) AS totalCount
     FROM EMP_MAST
     WHERE 1=1
-      ${search ? "AND employee_name LIKE ?" : ""}
+      ${search ? "AND (EMP_NAME LIKE ? OR MOB_NMBR = ?)" : ""}
       ${filter_ad_id ? "AND ad_id = ?" : ""}
       ${filter_from ? "AND created_at >= ?" : ""}
       ${filter_to ? "AND created_at <= ?" : ""}
   `;
   const values = [
-    ...(search ? [`%${search}%`] : []),
+    ...(search ? [`%${search}%`, search] : []),
     ...(filter_ad_id ? [filter_ad_id] : []),
     ...(filter_from ? [filter_from] : []),
     ...(filter_to ? [filter_to] : []),
   ];
-  console.log(query)
+  
+  // Log the query and values for debugging
+  console.log('Constructed Query:', query);
+  console.log('Values:', values);
+
   try {
     const [rows] = await db.query(query, values);
-    console.log(rows);
+    console.log('Query Result:', rows);
     return rows;
   } catch (err) {
     console.error("Error in getCount:", err);
     throw new Error("Unable to get count");
   }
 };
-
 
 
 
