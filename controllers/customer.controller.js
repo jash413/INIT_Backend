@@ -59,17 +59,18 @@ exports.create = async (req, res) => {
 
 const getTotalCustomerCount = async (
   search,
-  filter_subscription_id,
+  filter_ad_id,
   filter_from,
   filter_to
 ) => {
   try {
     const [result] = await Customer.getCount(
       search,
-      filter_subscription_id,
+      filter_ad_id,
       filter_from,
       filter_to
     );
+    console.log("Total count result:", result);
     return result.totalCount;
   } catch (err) {
     console.error("Error getting total customer count:", err);
@@ -85,7 +86,7 @@ exports.findAll = async (req, res) => {
     const sort = req.query.sort || "created_at";
     const order = req.query.order || "desc";
     const search = req.query.search || "";
-    const filter_subscription_id = req.query.filter_subscription_id || null;
+    const filter_ad_id = req.query.filter_ad_id || null;
     const filter_from = req.query.filter_from || null;
     const filter_to = req.query.filter_to || null;
 
@@ -96,7 +97,7 @@ exports.findAll = async (req, res) => {
       sort,
       order,
       search,
-      filter_subscription_id,
+      filter_ad_id,
       filter_from,
       filter_to,
     });
@@ -116,12 +117,22 @@ exports.findAll = async (req, res) => {
     if (limit === 0 || limit === null) {
       totalCount = await getTotalCustomerCount(
         search,
-        filter_subscription_id,
+        filter_ad_id,
         filter_from,
         filter_to
       );
       limit = totalCount;
+    } else {
+      totalCount = await getTotalCustomerCount(
+        search,
+        filter_ad_id,
+        filter_from,
+        filter_to
+      );
     }
+
+    console.log("Total count:", totalCount);
+    console.log("Limit:", limit);
 
     const [customers] = await Customer.getAll(
       limit,
@@ -129,10 +140,12 @@ exports.findAll = async (req, res) => {
       sort,
       order,
       search,
-      filter_subscription_id,
+      filter_ad_id,
       filter_from,
       filter_to
     );
+
+    console.log("Customers fetched:", customers.length);
 
     let paginationData = {};
     if (limit !== null) {
@@ -153,7 +166,7 @@ exports.findAll = async (req, res) => {
             sort,
             order,
             search,
-            filter_subscription_id,
+            filter_ad_id,
             filter_from,
             filter_to
           )
@@ -169,7 +182,7 @@ exports.findAll = async (req, res) => {
             sort,
             order,
             search,
-            filter_subscription_id,
+            filter_ad_id,
             filter_from,
             filter_to,
             "Previous"
@@ -185,7 +198,7 @@ exports.findAll = async (req, res) => {
             sort,
             order,
             search,
-            filter_subscription_id,
+            filter_ad_id,
             filter_from,
             filter_to,
             "Next"
@@ -201,7 +214,7 @@ exports.findAll = async (req, res) => {
           sort,
           order,
           search,
-          filter_subscription_id,
+          filter_ad_id,
           filter_from,
           filter_to
         ),
@@ -214,7 +227,7 @@ exports.findAll = async (req, res) => {
                 sort,
                 order,
                 search,
-                filter_subscription_id,
+                filter_ad_id,
                 filter_from,
                 filter_to
               )
@@ -227,7 +240,7 @@ exports.findAll = async (req, res) => {
                 sort,
                 order,
                 search,
-                filter_subscription_id,
+                filter_ad_id,
                 filter_from,
                 filter_to
               )
@@ -239,6 +252,8 @@ exports.findAll = async (req, res) => {
         links,
       };
     }
+
+    console.log("Pagination data:", paginationData);
 
     res.json(
       response.success("Customers retrieved successfully", customers, {
@@ -253,8 +268,6 @@ exports.findAll = async (req, res) => {
   }
 };
 
-
-// Helper functions (add these if they're not already present)
 const createPageLink = (
   pageNum,
   currentPage,
@@ -310,7 +323,6 @@ const createUrl = (
 };
 
 const isValidDate = (dateString) => {
-  // This regex allows for dates in the format YYYY-MM-DD or YYYY-DD-MM
   const regex = /^\d{4}-(0[1-9]|1[0-2]|[1-3]\d)-(0[1-9]|[12]\d|3[01])$/;
   if (!regex.test(dateString)) return false;
 
@@ -323,6 +335,7 @@ const isValidDate = (dateString) => {
     date.getDate() === day
   );
 };
+
 
 // Find a single Customer with an id
 exports.findOne = async (req, res) => {
