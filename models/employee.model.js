@@ -243,7 +243,7 @@ Employee.updateById = async (empId, employee) => {
     const setClause = setParts.join(", ");
     values.push(empId.toUpperCase());
 
-    const sqlQuery = `UPDATE EMP_MAST SET ${setClause} WHERE EMP_CODE = ?`;
+    const sqlQuery = `UPDATE EMP_MAST SET ${setClause} WHERE MOB_NMBR = ?`;
 
     const [result] = await db.query(sqlQuery, values);
 
@@ -296,7 +296,10 @@ Employee.getCount = async (search, filter_ad_id, filter_from, filter_to) => {
 // Delete Employee by id
 Employee.remove = async (empId) => {
     try {
-      const [res] = await db.query("DELETE FROM EMP_MAST WHERE EMP_CODE = ?", empId);
+      const [res] = await db.query(
+        "DELETE FROM EMP_MAST WHERE MOB_NMBR = ?",
+        empId
+      );
       if (res.affectedRows == 0) {
         throw new Error("Employee not found");
       }
@@ -327,9 +330,9 @@ Employee.getAll = async (
     // Handle search
     if (search) {
       query +=
-        " WHERE CONCAT_WS('', EMP_CODE, EMP_NAME, EMP_MAIL, CUS_CODE) LIKE ?";
+        " WHERE CONCAT_WS('', EMP_CODE, EMP_NAME, EMP_MAIL, CUS_CODE,MOB_NMBR) LIKE ?";
       countQuery +=
-        " WHERE CONCAT_WS('', EMP_CODE, EMP_NAME, EMP_MAIL, CUS_CODE) LIKE ?";
+        " WHERE CONCAT_WS('', EMP_CODE, EMP_NAME, EMP_MAIL, CUS_CODE,MOB_NMBR) LIKE ?";
       params.push(`%${search}%`);
       countParams.push(`%${search}%`);
     }
