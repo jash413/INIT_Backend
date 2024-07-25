@@ -55,7 +55,7 @@ Employee.create = async (newEmployee) => {
     if (lastEmp.length > 0) {
       const lastEmpCode = lastEmp[0].EMP_CODE;
       const numericPart = parseInt(lastEmpCode.substring(1)) + 1; // Extract numeric part and increment
-      nextEmpCode = `E${numericPart.toString().padStart(6, "0")}`; // Generate next EMP_CODE with 6 digits
+      nextEmpCode = `E${numericPart.toString().padStart(5, "0")}`; // Generate next EMP_CODE with 6 digits (1 letter + 5 digits)
     }
     // Add the generated EMP_CODE to newEmployee object
     newEmployee.EMP_CODE = nextEmpCode;
@@ -79,6 +79,7 @@ Employee.create = async (newEmployee) => {
     throw err;
   }
 };
+
 
 
 
@@ -333,9 +334,9 @@ Employee.getAll = async (
     // Handle search
     if (search) {
       query +=
-        " WHERE CONCAT_WS('', EMP_CODE, EMP_NAME, EMP_MAIL, CUS_CODE,MOB_NMBR) LIKE ?";
+        " WHERE CONCAT_WS('', EMP_CODE, EMP_NAME, EMP_MAIL, CUS_CODE, MOB_NMBR) LIKE ?";
       countQuery +=
-        " WHERE CONCAT_WS('', EMP_CODE, EMP_NAME, EMP_MAIL, CUS_CODE,MOB_NMBR) LIKE ?";
+        " WHERE CONCAT_WS('', EMP_CODE, EMP_NAME, EMP_MAIL, CUS_CODE, MOB_NMBR) LIKE ?";
       params.push(`%${search}%`);
       countParams.push(`%${search}%`);
     }
@@ -355,16 +356,25 @@ Employee.getAll = async (
         params.push(filter_ad_id);
         countParams.push(filter_ad_id);
       }
-      if (filter_from) {
-        filters.push(" CREATED_AT >= ?");
+
+      // Check if filter_from and filter_to are the same
+      if (filter_from && filter_to && filter_from === filter_to) {
+        filters.push(" DATE(CREATED_AT) = ?");
         params.push(filter_from);
         countParams.push(filter_from);
+      } else {
+        if (filter_from) {
+          filters.push(" CREATED_AT >= ?");
+          params.push(filter_from);
+          countParams.push(filter_from);
+        }
+        if (filter_to) {
+          filters.push(" CREATED_AT <= ?");
+          params.push(`${filter_to} 23:59:59`);
+          countParams.push(`${filter_to} 23:59:59`);
+        }
       }
-      if (filter_to) {
-        filters.push(" CREATED_AT <= ?");
-        params.push(`${filter_to} 23:59:59`);
-        countParams.push(`${filter_to} 23:59:59`);
-      }
+
       query += filters.join(" AND ");
       countQuery += filters.join(" AND ");
     }
@@ -392,16 +402,35 @@ Employee.getAll = async (
     query += " LIMIT ? OFFSET ?";
     params.push(parseInt(limit), parseInt(offset));
 
-    // Execute queries
-    const [employees] = await db.query(query, params);
+    // Debugging logs
+    console.log("Constructed query:", query);
+    console.log("Query parameters:", params);
+
+    console.log("Final SQL query:", query);
+    console.log("Final query parameters:", params);
+
+    // Execute count query first to get total count
     const [countResult] = await db.query(countQuery, countParams);
     const totalCount = countResult[0].total;
+
+    // Handle case where limit is 0
+    if (limit === 0) {
+      limit = totalCount; // Set limit to total count if limit is 0
+    }
+
+    // Execute main query with limit and offset
+    const [employees] = await db.query(query, params);
+
     return [employees, totalCount];
   } catch (err) {
     console.error("Error retrieving employees:", err);
     throw err;
   }
 };
+
+
+
+
 
 
 

@@ -107,15 +107,16 @@ exports.findAll = async (req, res) => {
         .json(response.error("Invalid filter_to date format"));
     }
 
+    // Handle the total count
     let totalCount;
-    if (limit === 0 || limit === null) {
+    if (limit === 0) {
       totalCount = await getTotalEmployeeCount(
         search,
         filter_ad_id,
         filter_from,
         filter_to
       );
-      limit = totalCount;
+      limit = totalCount; // Ensure all records are fetched
     } else {
       totalCount = await getTotalEmployeeCount(
         search,
@@ -126,7 +127,6 @@ exports.findAll = async (req, res) => {
     }
 
     console.log("Total count:", totalCount);
-    console.log("Limit:", limit);
 
     const [employees] = await Employee.getAll(
       limit,
@@ -142,9 +142,8 @@ exports.findAll = async (req, res) => {
     console.log("Employees fetched:", employees.length);
 
     let paginationData = {};
-    if (limit !== null) {
-      totalCount = totalCount || employees.length;
-      const totalPages = Math.ceil(totalCount / (limit || 1));
+    if (limit !== 0) {
+      const totalPages = Math.ceil(totalCount / limit);
 
       let links = [];
       const maxPageLinks = 5;
@@ -261,6 +260,7 @@ exports.findAll = async (req, res) => {
       .json(response.error("An error occurred while retrieving employees."));
   }
 };
+
 
 const createPageLink = (
   pageNum,

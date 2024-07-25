@@ -12,7 +12,8 @@ const Subscription = function (subscription) {
   this.status = subscription.status;
   this.ORD_REQD = subscription.ORD_REQD;
   this.INV_DATE = subscription.INV_DATE;
-  this.ad_id = subscription.ad_id; // Include ad_id from req.user
+  this.is_verified = subscription.is_verified; // New field
+  this.ad_id = subscription.ad_id;
 };
 
 // Create a new Subscription
@@ -75,6 +76,7 @@ Subscription.create = async (newSubscription) => {
       ORD_REQD: newSubscription.ORD_REQD,
       ad_id: newSubscription.ad_id,
       INV_DATE: newSubscription.INV_DATE,
+      is_verified: newSubscription.is_verified || false, // Default to false if not provided
     };
 
     const [res] = await db.query(
@@ -94,6 +96,7 @@ Subscription.create = async (newSubscription) => {
     return response.error("An error occurred while creating the subscription");
   }
 };
+
 
 // Find Subscription by id
 Subscription.findById = async (subId) => {
@@ -152,6 +155,7 @@ Subscription.updateByCode = async (SUB_CODE, updateData) => {
     "SUB_ORDN",
     "status",
     "ORD_REQD",
+    "is_verified", 
   ];
 
   const dateFields = ["SUB_STDT", "SUB_ENDT"];
@@ -186,6 +190,11 @@ Subscription.updateByCode = async (SUB_CODE, updateData) => {
           }
           updateFields.push(`${key} = ?`);
           updateValues.push(status);
+        } else if (key === "is_verified") {
+          // Ensure is_verified is a boolean
+          const isVerified = value ? 1 : 0;
+          updateFields.push(`${key} = ?`);
+          updateValues.push(isVerified);
         } else {
           updateFields.push(`${key} = ?`);
           updateValues.push(value);
@@ -208,7 +217,7 @@ Subscription.updateByCode = async (SUB_CODE, updateData) => {
         return { error: "Invalid plan code", statusCode: 400 };
       }
 
-      const planMonths = planDetails[0]["PLA_MONTH"]; // Corrected syntax
+      const planMonths = planDetails[0]["PLA_MONTH"];
       const startDate = new Date(updateData.SUB_STDT || new Date());
       const endDate = new Date(startDate);
       endDate.setMonth(endDate.getMonth() + planMonths);
@@ -244,6 +253,7 @@ Subscription.updateByCode = async (SUB_CODE, updateData) => {
     };
   }
 };
+
 
 // Delete Subscription by id
 Subscription.remove = async (subId, cusCode) => {
@@ -350,6 +360,7 @@ Subscription.getAll = async (
         "SUB_PDAT",
         "SUB_ORDN",
         "status",
+        "CREATED_AT",
       ].includes(sort.toUpperCase())
     ) {
       query += ` ORDER BY ${sort} ${
@@ -359,20 +370,34 @@ Subscription.getAll = async (
       query += " ORDER BY CREATED_AT DESC"; // default sorting
     }
 
-    // Handle pagination
+    // Execute count query first to get total count
+    const [countResult] = await db.query(countQuery, countParams);
+    const totalCount = countResult[0].total;
+
+    // Handle pagination limit
+    if (limit === 0) {
+      limit = totalCount; // Set limit to total count if limit is 0
+    }
+
+    // Execute main query with limit and offset
     query += " LIMIT ? OFFSET ?";
     params.push(parseInt(limit), parseInt(offset));
 
-    // Execute queries
+    // Debugging logs
+    console.log("Constructed query:", query);
+    console.log("Query parameters:", params);
+
     const [subscriptions] = await db.query(query, params);
-    const [countResult] = await db.query(countQuery, countParams);
-    const totalCount = countResult[0].total;
+
     return [subscriptions, totalCount];
   } catch (err) {
     console.error("Error retrieving subscriptions:", err);
     throw err;
   }
 };
+
+
+
 
 Subscription.getCount = async (
   search,

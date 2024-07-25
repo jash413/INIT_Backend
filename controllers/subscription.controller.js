@@ -1,7 +1,7 @@
 const Subscription = require('../models/subscription.model.js');
 const moment = require('moment');
 const response=require('../utils/response.js')
-// nothing
+
 exports.create = async (req, res) => {
   try {
     if (!req.body) {
@@ -27,6 +27,7 @@ exports.create = async (req, res) => {
       ORD_REQD: req.body.ORD_REQD,
       ad_id: req.user.id,
       INV_DATE: req.body.INV_DATE, // Assuming this is also in YYYY-MM-DD format
+      is_verified: req.body.is_verified, // Include is_verified field
     });
 
     const result = await Subscription.create(subscription);
@@ -46,6 +47,7 @@ exports.create = async (req, res) => {
       );
   }
 };
+
 
 const getTotalSubscriptionCount = async (
   search,
@@ -399,6 +401,7 @@ exports.update = async (req, res) => {
       );
   }
 };
+
 
 
 
