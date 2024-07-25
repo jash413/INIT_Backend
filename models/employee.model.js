@@ -85,7 +85,7 @@ Employee.create = async (newEmployee) => {
 
 Employee.findByEmpCode = async (empCode) => {
   try {
-    const query = "SELECT * FROM EMP_MAST WHERE EMP_CODE = ?";
+    const query = "SELECT * FROM EMP_MAST WHERE MOB_NMBR = ?";
     const [result] = await db.query(query, [empCode]);
     return result.length ? result[0] : null;
   } catch (err) {
@@ -117,8 +117,9 @@ Employee.findByMultipleCriteria = async (
     let whereClause = [];
 
     // Handling searchId
+    const isMobileNumber = /^\d{10}$/.test(searchId);
     if (searchId) {
-      whereClause.push("(EMP_CODE = ? OR CUS_CODE = ? OR SUB_CODE = ?)");
+      whereClause.push("(MOB_NMBR = ? OR CUS_CODE = ? OR SUB_CODE = ?)");
       params.push(searchId, searchId, searchId);
       countParams.push(searchId, searchId, searchId);
     }
@@ -126,7 +127,7 @@ Employee.findByMultipleCriteria = async (
     // Handling search
     if (search) {
       whereClause.push(
-        "CONCAT_WS('', EMP_CODE, EMP_NAME, EMP_MAIL,MOB_NMBR) LIKE ?"
+        "CONCAT_WS('', MOB_NMBR, EMP_NAME, EMP_MAIL, MOB_NMBR) LIKE ?"
       );
       params.push(`%${search}%`);
       countParams.push(`%${search}%`);
@@ -165,13 +166,9 @@ Employee.findByMultipleCriteria = async (
     // Sorting
     if (
       sort &&
-      [
-        "EMP_CODE",
-        "EMP_NAME",
-        "JOINED_AT",
-        "EMP_MAIL",
-        "MOB_NMBR",
-      ].includes(sort.toUpperCase())
+      ["EMP_CODE", "EMP_NAME", "JOINED_AT", "EMP_MAIL", "MOB_NMBR"].includes(
+        sort.toUpperCase()
+      )
     ) {
       query += ` ORDER BY ${sort} ${
         order.toUpperCase() === "DESC" ? "DESC" : "ASC"
@@ -193,12 +190,18 @@ Employee.findByMultipleCriteria = async (
     console.log("Count Query:", countQuery);
     console.log("Count Params:", countParams);
 
+    // If searching by mobile number, return a single object
+    if (isMobileNumber && employees.length > 0) {
+      return [employees[0], totalCount];
+    }
+
     return [employees, totalCount];
   } catch (err) {
     console.error("Error retrieving employees:", err);
     throw err;
   }
 };
+
 
 
 
