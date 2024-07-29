@@ -197,25 +197,31 @@ Employee.findByMultipleCriteria = async (
 };
 
 // Update Employee by id
-Employee.updateById = async (empId, employee) => {
+Employee.updateById = async (currentMobileNumber, employee) => {
   try {
     const setParts = [];
     const values = [];
+    let newMobileNumber = null;
 
     for (const [key, value] of Object.entries(employee)) {
       if (key === "ad_id") continue;
+
+      // Check if mobile number is being updated
+      if (key.toUpperCase() === "MOB_NMBR") {
+        newMobileNumber = value.toUpperCase();
+        continue; // Skip adding this to setParts for now
+      }
 
       // Convert all string and char fields to uppercase
       if (typeof value === "string" && value.constructor === String) {
         employee[key] = value.toUpperCase();
       }
 
-      // Check if the value is a datetime string in ISO 8601 format
+      // Handle datetime fields
       if (
         typeof value === "string" &&
         value.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z$/)
       ) {
-        // Convert the datetime string to MySQL's datetime format
         const formattedDate = new Date(value)
           .toISOString()
           .replace("T", " ")
@@ -228,23 +234,41 @@ Employee.updateById = async (empId, employee) => {
       }
     }
 
-    if (setParts.length === 0) {
+    if (setParts.length === 0 && !newMobileNumber) {
       throw new Error("No fields to update");
     }
 
-    const setClause = setParts.join(", ");
-    values.push(empId.toUpperCase());
+    let result;
 
-    const sqlQuery = `UPDATE EMP_MAST SET ${setClause} WHERE MOB_NMBR = ?`;
+    if (newMobileNumber) {
+      // If mobile number is being updated, perform a separate update
+      const mobileUpdateQuery = `UPDATE EMP_MAST SET MOB_NMBR = ? WHERE MOB_NMBR = ?`;
+      [result] = await db.query(mobileUpdateQuery, [
+        newMobileNumber,
+        currentMobileNumber,
+      ]);
 
-    const [result] = await db.query(sqlQuery, values);
+      if (result.affectedRows === 0) {
+        throw new Error("Employee not found");
+      }
 
-    if (result.affectedRows === 0) {
-      throw new Error("Employee not found");
+      // Update the currentMobileNumber for subsequent operations
+      currentMobileNumber = newMobileNumber;
     }
 
-    console.log("Updated employee: ", { id: empId, ...employee });
-    return { id: empId, ...employee };
+    if (setParts.length > 0) {
+      // Update other fields if there are any
+      const setClause = setParts.join(", ");
+      values.push(currentMobileNumber);
+      const sqlQuery = `UPDATE EMP_MAST SET ${setClause} WHERE MOB_NMBR = ?`;
+      [result] = await db.query(sqlQuery, values);
+
+      if (result.affectedRows === 0) {
+        throw new Error("Employee not found");
+      }
+    }
+
+    return { id: currentMobileNumber, ...employee };
   } catch (err) {
     console.error("Error updating employee:", err);
     throw err;

@@ -314,24 +314,26 @@ exports.findOne = async (req, res) => {
 // Update an Employee identified by the id in the request
 exports.update = async (req, res) => {
   try {
-    if (!req.body) {
+    if (!req.body || Object.keys(req.body).length === 0) {
       return res.status(400).json(response.error("Content cannot be empty!"));
     }
-
-    const updatedEmployee = new Employee(req.body);
-    const data = await Employee.updateById(req.params.empId, updatedEmployee);
-
+    const currentMobileNumber = req.params.empId; // Assuming empId is the current mobile number
+    const data = await Employee.updateById(currentMobileNumber, req.body);
     if (!data) {
       return res.status(404).json(response.notFound("Employee not found"));
     }
-
     res.json(response.success("Employee updated successfully", data));
   } catch (err) {
-    console.error("Error updating employee with id " + req.params.empId, err);
+    console.error(
+      "Error updating employee with mobile number " + req.params.empId,
+      err
+    );
     res
       .status(500)
       .json(
-        response.error("Error updating employee with id " + req.params.empId)
+        response.error(
+          "Error updating employee with mobile number " + req.params.empId
+        )
       );
   }
 };
