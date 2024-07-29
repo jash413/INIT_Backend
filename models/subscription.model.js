@@ -104,7 +104,16 @@ Subscription.findById = async (subId) => {
     subId = subId.toUpperCase();
 
     const [subscriptions] = await db.query(
-      "SELECT * FROM SUB_MAST WHERE SUB_CODE = ? OR CUS_CODE = ?",
+      `SELECT 
+        SUB_MAST.*, 
+        usr_admin.ad_name AS admin_name, 
+        CUS_MAST.CUS_NAME AS customer_name,
+        SUB_PLAN.PLA_DESC AS plan_description 
+      FROM SUB_MAST
+      LEFT JOIN usr_admin ON SUB_MAST.ad_id = usr_admin.ad_id
+      LEFT JOIN SUB_PLAN ON SUB_MAST.PLA_CODE = SUB_PLAN.PLA_CODE
+      LEFT JOIN CUS_MAST ON SUB_MAST.CUS_CODE = CUS_MAST.CUS_CODE
+      WHERE SUB_MAST.SUB_CODE = ? OR SUB_MAST.CUS_CODE = ?`, // Match by SUB_CODE or CUS_CODE
       [subId, subId]
     );
 
@@ -152,7 +161,7 @@ Subscription.updateByCode = async (SUB_CODE, updateData) => {
     "SUB_ORDN",
     "status",
     "ORD_REQD",
-    "is_verified", 
+    "is_verified",
   ];
 
   const dateFields = ["SUB_STDT", "SUB_ENDT"];
@@ -300,70 +309,73 @@ Subscription.getAll = async (
   filter_to
 ) => {
   try {
-    let query = "SELECT * FROM SUB_MAST";
+    let query = `
+      SELECT 
+        SUB_MAST.*, 
+        usr_admin.ad_name AS admin_name, 
+        CUS_MAST.CUS_NAME AS customer_name ,
+        SUB_PLAN.PLA_DESC AS plan_description
+      FROM SUB_MAST
+      LEFT JOIN usr_admin ON SUB_MAST.ad_id = usr_admin.ad_id
+      LEFT JOIN SUB_PLAN ON SUB_MAST.PLA_CODE = SUB_PLAN.PLA_CODE
+      LEFT JOIN CUS_MAST ON SUB_MAST.CUS_CODE = CUS_MAST.CUS_CODE`;
+
     let countQuery = "SELECT COUNT(*) as total FROM SUB_MAST";
     let params = [];
     let countParams = [];
 
+    const conditions = [];
+
     // Handle search
     if (search) {
-      query +=
-        " WHERE CONCAT_WS('', SUB_CODE, CUS_CODE, PLA_CODE, SUB_ORDN) LIKE ?";
-      countQuery +=
-        " WHERE CONCAT_WS('', SUB_CODE, CUS_CODE, PLA_CODE, SUB_ORDN) LIKE ?";
+      const searchCondition =
+        "CONCAT_WS('', SUB_CODE, CUS_CODE, PLA_CODE, SUB_ORDN) LIKE ?";
+      conditions.push(searchCondition);
       params.push(`%${search}%`);
       countParams.push(`%${search}%`);
     }
 
     // Handle filters
-    if (filter_ad_id || filter_from || filter_to) {
-      if (!search) {
-        query += " WHERE";
-        countQuery += " WHERE";
-      } else {
-        query += " AND";
-        countQuery += " AND";
-      }
-      const filters = [];
-      if (filter_ad_id) {
-        filters.push(" ad_id = ?");
-        params.push(filter_ad_id);
-        countParams.push(filter_ad_id);
-      }
-      if (filter_from) {
-        filters.push(" CREATED_AT >= ?");
-        params.push(filter_from);
-        countParams.push(filter_from);
-      }
-      if (filter_to) {
-        filters.push(" CREATED_AT <= ?");
-        params.push(`${filter_to} 23:59:59`);
-        countParams.push(`${filter_to} 23:59:59`);
-      }
-      query += filters.join(" AND ");
-      countQuery += filters.join(" AND ");
+    if (filter_ad_id) {
+      conditions.push("SUB_MAST.ad_id = ?");
+      params.push(filter_ad_id);
+      countParams.push(filter_ad_id);
+    }
+    if (filter_from) {
+      conditions.push("SUB_MAST.CREATED_AT >= ?");
+      params.push(filter_from);
+      countParams.push(filter_from);
+    }
+    if (filter_to) {
+      conditions.push("SUB_MAST.CREATED_AT <= ?");
+      params.push(`${filter_to} 23:59:59`);
+      countParams.push(`${filter_to} 23:59:59`);
+    }
+
+    if (conditions.length > 0) {
+      const conditionString = conditions.join(" AND ");
+      query += ` WHERE ${conditionString}`;
+      countQuery += ` WHERE ${conditionString}`;
     }
 
     // Handle sorting
-    if (
-      sort &&
-      [
-        "SUB_CODE",
-        "CUS_CODE",
-        "PLA_CODE",
-        "SUB_STDT",
-        "SUB_ENDT",
-        "SUB_PDAT",
-        "SUB_ORDN",
-        "status",
-        "CREATED_AT",
-      ].includes(sort.toUpperCase())
-    ) {
+    const validSortFields = [
+      "SUB_CODE",
+      "CUS_CODE",
+      "PLA_CODE",
+      "SUB_STDT",
+      "SUB_ENDT",
+      "SUB_PDAT",
+      "SUB_ORDN",
+      "status",
+      "CREATED_AT",
+    ];
+    if (sort && validSortFields.includes(sort.toUpperCase())) {
       query += ` ORDER BY ${sort} ${
         order.toUpperCase() === "DESC" ? "DESC" : "ASC"
       }`;
     } else {
-      query += " ORDER BY CREATED_AT DESC"; // default sorting
+      query += " ORDER BY SUB_MAST.CREATED_AT DESC"; // default sorting
     }
 
     // Execute count query first to get total count
@@ -378,7 +390,6 @@ Subscription.getAll = async (
     // Execute main query with limit and offset
     query += " LIMIT ? OFFSET ?";
     params.push(parseInt(limit), parseInt(offset));
-
 
     const [subscriptions] = await db.query(query, params);
 

@@ -200,7 +200,12 @@ Customer.getAll = async (
   filter_to
 ) => {
   try {
-    let query = "SELECT * FROM CUS_MAST";
+    let query = `
+      SELECT 
+        CUS_MAST.*, 
+        usr_admin.ad_name AS admin_name 
+      FROM CUS_MAST
+      LEFT JOIN usr_admin ON CUS_MAST.ad_id = usr_admin.ad_id`;
     let countQuery = "SELECT COUNT(*) as total FROM CUS_MAST";
     let params = [];
     let countParams = [];

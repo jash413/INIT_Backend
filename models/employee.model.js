@@ -18,7 +18,7 @@ const Employee = function (employee) {
   this.REG_TOKEN = employee.REG_TOKEN;
   this.ad_id = employee.ad_id; // Include ad_id from req.user
   this.DEVICE_ID = employee.DEVICE_ID;
-  this.STATUS = employee.STATUS ? employee.STATUS : '0';
+  this.STATUS = employee.STATUS ? employee.STATUS : "0";
   this.SALE_OS_ACTIVE = employee.SALE_OS_ACTIVE;
   this.PUR_OS_ACTIVE = employee.PUR_OS_ACTIVE;
   this.SALE_ORDER_ACTIVE = employee.SALE_ORDER_ACTIVE;
@@ -254,21 +254,21 @@ Employee.updateById = async (empId, employee) => {
 
 // Delete Employee by id
 Employee.remove = async (empId) => {
-    try {
-      const [res] = await db.query(
-        "DELETE FROM EMP_MAST WHERE MOB_NMBR = ?",
-        empId
-      );
-      if (res.affectedRows == 0) {
-        throw new Error("Employee not found");
-      }
-      console.log("Deleted employee with id: ", empId);
-      return res;
-    } catch (err) {
-      console.error("Error deleting employee:", err);
-      throw err;
+  try {
+    const [res] = await db.query(
+      "DELETE FROM EMP_MAST WHERE MOB_NMBR = ?",
+      empId
+    );
+    if (res.affectedRows == 0) {
+      throw new Error("Employee not found");
     }
-}
+    console.log("Deleted employee with id: ", empId);
+    return res;
+  } catch (err) {
+    console.error("Error deleting employee:", err);
+    throw err;
+  }
+};
 
 Employee.getAll = async (
   limit,
@@ -281,7 +281,13 @@ Employee.getAll = async (
   filter_to
 ) => {
   try {
-    let query = "SELECT * FROM EMP_MAST";
+    let query = `SELECT 
+    EMP_MAST.*, 
+    usr_admin.ad_name AS admin_name, 
+    CUS_MAST.CUS_NAME AS customer_name
+  FROM EMP_MAST
+  LEFT JOIN usr_admin ON EMP_MAST.ad_id = usr_admin.ad_id
+  LEFT JOIN CUS_MAST ON EMP_MAST.CUS_CODE = CUS_MAST.CUS_CODE`;
     let countQuery = "SELECT COUNT(*) as total FROM EMP_MAST";
     let params = [];
     let countParams = [];
@@ -353,10 +359,6 @@ Employee.getAll = async (
       query += " ORDER BY CREATED_AT DESC"; // default sorting
     }
 
-    // Handle pagination
-    query += " LIMIT ? OFFSET ?";
-    params.push(parseInt(limit), parseInt(offset));
-
     // Execute count query first to get total count
     const [countResult] = await db.query(countQuery, countParams);
     const totalCount = countResult[0].total;
@@ -365,6 +367,10 @@ Employee.getAll = async (
     if (limit === 0) {
       limit = totalCount; // Set limit to total count if limit is 0
     }
+
+    // Handle pagination
+    query += " LIMIT ? OFFSET ?";
+    params.push(parseInt(limit), parseInt(offset));
 
     // Execute main query with limit and offset
     const [employees] = await db.query(query, params);
@@ -375,12 +381,5 @@ Employee.getAll = async (
     throw err;
   }
 };
-
-
-
-
-
-
-
 
 module.exports = Employee;
