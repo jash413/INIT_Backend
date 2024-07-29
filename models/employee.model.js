@@ -71,7 +71,6 @@ Employee.create = async (newEmployee) => {
 
     // Insert the new employee with the generated EMP_CODE
     const [res] = await db.query("INSERT INTO EMP_MAST SET ?", newEmployee);
-    console.log("Created employee: ", { id: res.insertId, ...newEmployee });
     return { id: res.insertId, ...newEmployee };
   } catch (err) {
     console.error("Error creating employee:", err);

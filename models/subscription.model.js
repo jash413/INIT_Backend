@@ -69,7 +69,7 @@ Subscription.create = async (newSubscription) => {
       CUS_CODE: newSubscription.CUS_CODE,
       PLA_CODE: newSubscription.PLA_CODE,
       SUB_STDT: newSubscription.SUB_STDT, // Already in YYYY-MM-DD format
-      SUB_ENDT: endDate.toISOString().split("T")[0],
+      SUB_ENDT: endDate,
       LIC_USER: newSubscription.LIC_USER,
       SUB_ORDN: newSubscription.SUB_ORDN,
       status: newSubscription.status || 0,
@@ -179,7 +179,7 @@ Subscription.updateByCode = async (SUB_CODE, updateData) => {
             return { error: `Invalid ${key} format`, statusCode: 400 };
           }
           updateFields.push(`${key} = ?`);
-          updateValues.push(date.toISOString().split("T")[0]); // Format as YYYY-MM-DD
+          updateValues.push(date); // Format as YYYY-MM-DD
         } else if (key === "LIC_USER") {
           // Ensure LIC_USER is a smallint
           const licUser = parseInt(value, 10);
@@ -229,7 +229,7 @@ Subscription.updateByCode = async (SUB_CODE, updateData) => {
       endDate.setMonth(endDate.getMonth() + planMonths);
 
       updateFields.push("SUB_ENDT = ?");
-      updateValues.push(endDate.toISOString().split("T")[0]); // Format as YYYY-MM-DD
+      updateValues.push(endDate); // Format as YYYY-MM-DD
     }
 
     updateValues.push(SUB_CODE);
@@ -249,7 +249,6 @@ Subscription.updateByCode = async (SUB_CODE, updateData) => {
       [SUB_CODE]
     );
 
-    console.log("Updated subscription: ", { SUB_CODE, ...updateData });
     return { data: updatedSubscription, statusCode: 200 };
   } catch (err) {
     console.error("Error updating subscription:", err);
