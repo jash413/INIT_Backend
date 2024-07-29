@@ -51,27 +51,6 @@ exports.create = async (req, res) => {
   }
 };
 
-const getTotalEmployeeCount = async (
-  search,
-  filter_ad_id,
-  filter_from,
-  filter_to
-) => {
-  try {
-    const [result] = await Employee.getCount(
-      search,
-      filter_ad_id,
-      filter_from,
-      filter_to
-    );
-    console.log("Total count result:", result);
-    return result.totalCount;
-  } catch (err) {
-    console.error("Error getting total employee count:", err);
-    throw new Error("Unable to get total employee count");
-  }
-};
-
 exports.findAll = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
@@ -84,18 +63,6 @@ exports.findAll = async (req, res) => {
     const filter_from = req.query.filter_from || null;
     const filter_to = req.query.filter_to || null;
 
-    console.log("Query parameters:", {
-      page,
-      limit,
-      offset,
-      sort,
-      order,
-      search,
-      filter_ad_id,
-      filter_from,
-      filter_to,
-    });
-
     if (filter_from && !isValidDate(filter_from)) {
       return res
         .status(400)
@@ -107,28 +74,7 @@ exports.findAll = async (req, res) => {
         .json(response.error("Invalid filter_to date format"));
     }
 
-    // Handle the total count
-    let totalCount;
-    if (limit === 0) {
-      totalCount = await getTotalEmployeeCount(
-        search,
-        filter_ad_id,
-        filter_from,
-        filter_to
-      );
-      limit = totalCount; // Ensure all records are fetched
-    } else {
-      totalCount = await getTotalEmployeeCount(
-        search,
-        filter_ad_id,
-        filter_from,
-        filter_to
-      );
-    }
-
-    console.log("Total count:", totalCount);
-
-    const [employees] = await Employee.getAll(
+    const [employees, totalCount] = await Employee.getAll(
       limit,
       offset,
       sort,
@@ -139,10 +85,8 @@ exports.findAll = async (req, res) => {
       filter_to
     );
 
-    console.log("Employees fetched:", employees.length);
-
     let paginationData = {};
-    if (limit !== 0) {
+    if (limit !== null) {
       const totalPages = Math.ceil(totalCount / limit);
 
       let links = [];
@@ -246,8 +190,6 @@ exports.findAll = async (req, res) => {
       };
     }
 
-    console.log("Pagination data:", paginationData);
-
     res.json(
       response.success("Employees retrieved successfully", employees, {
         pagination: paginationData,
@@ -260,7 +202,6 @@ exports.findAll = async (req, res) => {
       .json(response.error("An error occurred while retrieving employees."));
   }
 };
-
 
 const createPageLink = (
   pageNum,

@@ -1,5 +1,4 @@
 const db = require("../utils/db");
-const response = require("../utils/response");
 
 const Employee = function (employee) {
   this.CUS_CODE = employee.CUS_CODE;
@@ -80,10 +79,6 @@ Employee.create = async (newEmployee) => {
   }
 };
 
-
-
-
-
 Employee.findByEmpCode = async (empCode) => {
   try {
     const query = "SELECT * FROM EMP_MAST WHERE MOB_NMBR = ?";
@@ -94,7 +89,6 @@ Employee.findByEmpCode = async (empCode) => {
     throw err;
   }
 };
-
 
 Employee.findByMultipleCriteria = async (
   limit,
@@ -203,11 +197,6 @@ Employee.findByMultipleCriteria = async (
   }
 };
 
-
-
-
-
-
 // Update Employee by id
 Employee.updateById = async (empId, employee) => {
   try {
@@ -262,40 +251,6 @@ Employee.updateById = async (empId, employee) => {
     throw err;
   }
 };
-
-Employee.getCount = async (search, filter_ad_id, filter_from, filter_to) => {
-  // Construct the query to count the total number of employees
-  const query = `
-    SELECT COUNT(*) AS totalCount
-    FROM EMP_MAST
-    WHERE 1=1
-      ${search ? "AND (EMP_NAME LIKE ? OR MOB_NMBR = ?)" : ""}
-      ${filter_ad_id ? "AND ad_id = ?" : ""}
-      ${filter_from ? "AND created_at >= ?" : ""}
-      ${filter_to ? "AND created_at <= ?" : ""}
-  `;
-  const values = [
-    ...(search ? [`%${search}%`, search] : []),
-    ...(filter_ad_id ? [filter_ad_id] : []),
-    ...(filter_from ? [filter_from] : []),
-    ...(filter_to ? [filter_to] : []),
-  ];
-  
-  // Log the query and values for debugging
-  console.log('Constructed Query:', query);
-  console.log('Values:', values);
-
-  try {
-    const [rows] = await db.query(query, values);
-    console.log('Query Result:', rows);
-    return rows;
-  } catch (err) {
-    console.error("Error in getCount:", err);
-    throw new Error("Unable to get count");
-  }
-};
-
-
 
 // Delete Employee by id
 Employee.remove = async (empId) => {
@@ -401,13 +356,6 @@ Employee.getAll = async (
     // Handle pagination
     query += " LIMIT ? OFFSET ?";
     params.push(parseInt(limit), parseInt(offset));
-
-    // Debugging logs
-    console.log("Constructed query:", query);
-    console.log("Query parameters:", params);
-
-    console.log("Final SQL query:", query);
-    console.log("Final query parameters:", params);
 
     // Execute count query first to get total count
     const [countResult] = await db.query(countQuery, countParams);
