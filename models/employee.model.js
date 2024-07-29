@@ -281,12 +281,13 @@ Employee.getAll = async (
 ) => {
   try {
     let query = `SELECT 
-    EMP_MAST.*, 
-    usr_admin.ad_name AS admin_name, 
-    CUS_MAST.CUS_NAME AS customer_name
-  FROM EMP_MAST
-  LEFT JOIN usr_admin ON EMP_MAST.ad_id = usr_admin.ad_id
-  LEFT JOIN CUS_MAST ON EMP_MAST.CUS_CODE = CUS_MAST.CUS_CODE`;
+      EMP_MAST.*, 
+      usr_admin.ad_name AS admin_name, 
+      CUS_MAST.CUS_NAME AS customer_name
+    FROM EMP_MAST
+    LEFT JOIN usr_admin ON EMP_MAST.ad_id = usr_admin.ad_id
+    LEFT JOIN CUS_MAST ON EMP_MAST.CUS_CODE = CUS_MAST.CUS_CODE`;
+
     let countQuery = "SELECT COUNT(*) as total FROM EMP_MAST";
     let params = [];
     let countParams = [];
@@ -294,9 +295,9 @@ Employee.getAll = async (
     // Handle search
     if (search) {
       query +=
-        " WHERE CONCAT_WS('', EMP_CODE, EMP_NAME, EMP_MAIL, CUS_CODE, MOB_NMBR) LIKE ?";
+        " WHERE CONCAT_WS('', EMP_MAST.EMP_CODE, EMP_MAST.EMP_NAME, EMP_MAST.EMP_MAIL, EMP_MAST.CUS_CODE, EMP_MAST.MOB_NMBR) LIKE ?";
       countQuery +=
-        " WHERE CONCAT_WS('', EMP_CODE, EMP_NAME, EMP_MAIL, CUS_CODE, MOB_NMBR) LIKE ?";
+        " WHERE CONCAT_WS('', EMP_MAST.EMP_CODE, EMP_MAST.EMP_NAME, EMP_MAST.EMP_MAIL, EMP_MAST.CUS_CODE, EMP_MAST.MOB_NMBR) LIKE ?";
       params.push(`%${search}%`);
       countParams.push(`%${search}%`);
     }
@@ -312,24 +313,24 @@ Employee.getAll = async (
       }
       const filters = [];
       if (filter_ad_id) {
-        filters.push(" ad_id = ?");
+        filters.push(" EMP_MAST.ad_id = ?");
         params.push(filter_ad_id);
         countParams.push(filter_ad_id);
       }
 
       // Check if filter_from and filter_to are the same
       if (filter_from && filter_to && filter_from === filter_to) {
-        filters.push(" DATE(CREATED_AT) = ?");
+        filters.push(" DATE(EMP_MAST.CREATED_AT) = ?");
         params.push(filter_from);
         countParams.push(filter_from);
       } else {
         if (filter_from) {
-          filters.push(" CREATED_AT >= ?");
+          filters.push(" EMP_MAST.CREATED_AT >= ?");
           params.push(filter_from);
           countParams.push(filter_from);
         }
         if (filter_to) {
-          filters.push(" CREATED_AT <= ?");
+          filters.push(" EMP_MAST.CREATED_AT <= ?");
           params.push(`${filter_to} 23:59:59`);
           countParams.push(`${filter_to} 23:59:59`);
         }
@@ -351,11 +352,11 @@ Employee.getAll = async (
         "CREATED_AT",
       ].includes(sort.toUpperCase())
     ) {
-      query += ` ORDER BY ${sort} ${
+      query += ` ORDER BY EMP_MAST.${sort} ${
         order.toUpperCase() === "DESC" ? "DESC" : "ASC"
       }`;
     } else {
-      query += " ORDER BY CREATED_AT DESC"; // default sorting
+      query += " ORDER BY EMP_MAST.CREATED_AT DESC"; // default sorting
     }
 
     // Execute count query first to get total count
@@ -380,5 +381,6 @@ Employee.getAll = async (
     throw err;
   }
 };
+
 
 module.exports = Employee;
