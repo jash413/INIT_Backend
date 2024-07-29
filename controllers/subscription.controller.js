@@ -1,5 +1,4 @@
 const Subscription = require('../models/subscription.model.js');
-const moment = require('moment');
 const response=require('../utils/response.js')
 
 exports.create = async (req, res) => {
@@ -48,28 +47,6 @@ exports.create = async (req, res) => {
   }
 };
 
-
-const getTotalSubscriptionCount = async (
-  search,
-  filter_ad_id,
-  filter_from,
-  filter_to
-) => {
-  try {
-    const [result] = await Subscription.getCount(
-      search,
-      filter_ad_id,
-      filter_from,
-      filter_to
-    );
-    console.log("Total count result:", result);
-    return result.totalCount;
-  } catch (err) {
-    console.error("Error getting total subscription count:", err);
-    throw new Error("Unable to get total subscription count");
-  }
-};
-
 exports.findAll = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
@@ -82,18 +59,6 @@ exports.findAll = async (req, res) => {
     const filter_from = req.query.filter_from || null;
     const filter_to = req.query.filter_to || null;
 
-    console.log("Query parameters:", {
-      page,
-      limit,
-      offset,
-      sort,
-      order,
-      search,
-      filter_ad_id,
-      filter_from,
-      filter_to,
-    });
-
     if (filter_from && !isValidDate(filter_from)) {
       return res
         .status(400)
@@ -105,28 +70,7 @@ exports.findAll = async (req, res) => {
         .json(response.error("Invalid filter_to date format"));
     }
 
-    let totalCount;
-    if (limit === 0 || limit === null) {
-      totalCount = await getTotalSubscriptionCount(
-        search,
-        filter_ad_id,
-        filter_from,
-        filter_to
-      );
-      limit = totalCount;
-    } else {
-      totalCount = await getTotalSubscriptionCount(
-        search,
-        filter_ad_id,
-        filter_from,
-        filter_to
-      );
-    }
-
-    console.log("Total count:", totalCount);
-    console.log("Limit:", limit);
-
-    const [subscriptions] = await Subscription.getAll(
+    const [subscriptions,totalCount] = await Subscription.getAll(
       limit,
       offset,
       sort,
@@ -137,11 +81,8 @@ exports.findAll = async (req, res) => {
       filter_to
     );
 
-    console.log("Subscriptions fetched:", subscriptions.length);
-
     let paginationData = {};
-    if (limit !== null) {
-      totalCount = totalCount || subscriptions.length;
+    if (limit !== null) {;
       const totalPages = Math.ceil(totalCount / (limit || 1));
 
       let links = [];
@@ -245,8 +186,6 @@ exports.findAll = async (req, res) => {
       };
     }
 
-    console.log("Pagination data:", paginationData);
-
     res.json(
       response.success("Subscriptions retrieved successfully", subscriptions, {
         pagination: paginationData,
@@ -330,9 +269,6 @@ const isValidDate = (dateString) => {
   );
 };
 
-
-
-
 // Find a single Subscription with an id
 exports.findOne = async (req, res) => {
   try {
@@ -401,11 +337,6 @@ exports.update = async (req, res) => {
       );
   }
 };
-
-
-
-
-
 
 // Delete a Subscription with the specified id in the request
 exports.delete = async (req, res) => {

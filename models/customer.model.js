@@ -14,7 +14,8 @@ const Customer = function (customer) {
   this.CUS_ADDR = customer.CUS_ADDR;
   this.PHO_NMBR = customer.PHO_NMBR;
   this.CUS_REFB = customer.CUS_REFB;
-  this.is_active =customer.is_active !== undefined ? Number(customer.is_active) : 1;
+  this.is_active =
+    customer.is_active !== undefined ? Number(customer.is_active) : 1;
   this.ad_id = customer.ad_id; // Include ad_id from req.user
 };
 
@@ -42,39 +43,39 @@ Customer.create = async (newCustomer) => {
   const initials = nameParts[0].slice(0, 2); // Take first two letters of the first word
 
   try {
-  const nameParts = newCustomer.CUS_NAME.split(" ");
-  const initials = nameParts
-    .slice(0, 2)
-    .map((part) => part[0])
-    .join("");
-  // Find the highest number for the given initials
-  const [rows] = await db.query(
-    "SELECT CUS_CODE FROM CUS_MAST WHERE CUS_CODE LIKE ? ORDER BY CUS_CODE DESC LIMIT 1",
-    [`${initials}%`]
-  );
+    const nameParts = newCustomer.CUS_NAME.split(" ");
+    const initials = nameParts
+      .slice(0, 2)
+      .map((part) => part[0])
+      .join("");
+    // Find the highest number for the given initials
+    const [rows] = await db.query(
+      "SELECT CUS_CODE FROM CUS_MAST WHERE CUS_CODE LIKE ? ORDER BY CUS_CODE DESC LIMIT 1",
+      [`${initials}%`]
+    );
 
-  let number = 1;
-  if (rows.length > 0) {
-    const lastCode = rows[0].CUS_CODE;
-    const lastNumber = parseInt(lastCode.slice(-4));
-    number = lastNumber + 1;
+    let number = 1;
+    if (rows.length > 0) {
+      const lastCode = rows[0].CUS_CODE;
+      const lastNumber = parseInt(lastCode.slice(-4));
+      number = lastNumber + 1;
     }
 
-  newCustomer.CUS_CODE = `${initials}${number.toString().padStart(4, "0")}`;
+    newCustomer.CUS_CODE = `${initials}${number.toString().padStart(4, "0")}`;
 
-  // Format dates for MySQL
-  newCustomer.INS_DATE = now.toISOString().slice(0, 19).replace("T", " ");
-  newCustomer.DUE_DAYS = 30;
+    // Format dates for MySQL
+    newCustomer.INS_DATE = now.toISOString().slice(0, 19).replace("T", " ");
+    newCustomer.DUE_DAYS = 30;
     newCustomer.EXP_DATE = expirationDate.toISOString().slice(0, 10);
 
-  // Insert the new customer
-  const [res] = await db.query("INSERT INTO CUS_MAST SET ?", newCustomer);
-  console.log("Created customer: ", { id: res.insertId, ...newCustomer });
-  return { id: res.insertId, ...newCustomer };
-} catch (err) {
-  console.error("Error creating customer:", err);
-  throw err;
-}
+    // Insert the new customer
+    const [res] = await db.query("INSERT INTO CUS_MAST SET ?", newCustomer);
+    console.log("Created customer: ", { id: res.insertId, ...newCustomer });
+    return { id: res.insertId, ...newCustomer };
+  } catch (err) {
+    console.error("Error creating customer:", err);
+    throw err;
+  }
 };
 // Retrieve Customer by id
 Customer.findById = async (custId) => {
@@ -187,7 +188,6 @@ Customer.updateById = async (CUS_CODE, updateData) => {
   }
 };
 
-
 // Retrieve all Customers
 Customer.getAll = async (
   limit,
@@ -265,15 +265,19 @@ Customer.getAll = async (
       query += " ORDER BY CREATED_AT DESC"; // default sorting
     }
 
+    // Execute queries
+    const [countResult] = await db.query(countQuery, countParams);
+    const totalCount = countResult[0].total;
+
+    if (limit === 0) {
+      limit = totalCount; // Set limit to total count if limit is 0
+    }
+
     // Handle pagination
     query += " LIMIT ? OFFSET ?";
     params.push(parseInt(limit), parseInt(offset));
 
-
-    // Execute queries
     const [customers] = await db.query(query, params);
-    const [countResult] = await db.query(countQuery, countParams);
-    const totalCount = countResult[0].total;
 
     return [customers, totalCount];
   } catch (err) {
@@ -281,40 +285,6 @@ Customer.getAll = async (
     throw err;
   }
 };
-
-
-Customer.getCount = async (
-  search,
-  filter_subscription_id,
-  filter_from,
-  filter_to
-) => {
-  const query = `
-    SELECT COUNT(*) AS totalCount
-    FROM CUS_MAST
-    WHERE 1=1
-      ${search ? "AND customer_name LIKE ?" : ""}
-      ${filter_subscription_id ? "AND subscription_id = ?" : ""}
-      ${filter_from ? "AND created_at >= ?" : ""}
-      ${filter_to ? "AND created_at <= ?" : ""}
-  `;
-  const values = [
-    ...(search ? [`%${search}%`] : []),
-    ...(filter_subscription_id ? [filter_subscription_id] : []),
-    ...(filter_from ? [filter_from] : []),
-    ...(filter_to ? [filter_to] : []),
-  ];
-  console.log(query);
-  try {
-    const [rows] = await db.query(query, values);
-    console.log(rows);
-    return rows;
-  } catch (err) {
-    console.error("Error in getCount:", err);
-    throw new Error("Unable to get count");
-  }
-};
-
 
 // Delete Customer by id
 Customer.remove = async (CUS_CODE) => {
@@ -371,6 +341,5 @@ Customer.remove = async (CUS_CODE) => {
     connection.release();
   }
 };
-
 
 module.exports = Customer;
