@@ -312,7 +312,7 @@ Subscription.getAll = async (
       SELECT 
         SUB_MAST.*, 
         usr_admin.ad_name AS admin_name, 
-        CUS_MAST.CUS_NAME AS customer_name ,
+        CUS_MAST.CUS_NAME AS customer_name,
         SUB_PLAN.PLA_DESC AS plan_description
       FROM SUB_MAST
       LEFT JOIN usr_admin ON SUB_MAST.ad_id = usr_admin.ad_id
@@ -328,7 +328,7 @@ Subscription.getAll = async (
     // Handle search
     if (search) {
       const searchCondition =
-        "CONCAT_WS('', SUB_CODE, CUS_CODE, PLA_CODE, SUB_ORDN) LIKE ?";
+        "CONCAT_WS('', SUB_MAST.SUB_CODE, SUB_MAST.CUS_CODE, SUB_MAST.PLA_CODE, SUB_MAST.SUB_ORDN) LIKE ?";
       conditions.push(searchCondition);
       params.push(`%${search}%`);
       countParams.push(`%${search}%`);
@@ -370,7 +370,7 @@ Subscription.getAll = async (
       "CREATED_AT",
     ];
     if (sort && validSortFields.includes(sort.toUpperCase())) {
-      query += ` ORDER BY ${sort} ${
+      query += ` ORDER BY ${sort.toUpperCase()} ${
         order.toUpperCase() === "DESC" ? "DESC" : "ASC"
       }`;
     } else {
@@ -398,5 +398,6 @@ Subscription.getAll = async (
     throw err;
   }
 };
+
 
 module.exports = Subscription;
