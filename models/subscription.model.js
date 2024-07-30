@@ -39,7 +39,7 @@ Subscription.create = async (newSubscription) => {
         parseInt(highestCode[0].SUB_CODE.replace("000", "")) + 1;
       nextCode = currentMaxNum;
     }
-    const newSUB_CODE = `SUB${nextCode.toString().padStart(3, "0")}`;
+    const newSUB_CODE = `000${nextCode.toString().padStart(3, "0")}`;
 
     // Check for SUB_STDT
     if (!newSubscription.SUB_STDT) {
@@ -96,6 +96,7 @@ Subscription.create = async (newSubscription) => {
     return response.error("An error occurred while creating the subscription");
   }
 };
+
 
 // Find Subscription by id
 Subscription.findById = async (subId) => {
