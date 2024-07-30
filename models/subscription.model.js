@@ -36,7 +36,7 @@ Subscription.create = async (newSubscription) => {
     let nextCode = 1;
     if (highestCode.length > 0) {
       const currentMaxNum =
-        parseInt(highestCode[0].SUB_CODE.replace("SUB", "")) + 1;
+        parseInt(highestCode[0].SUB_CODE.replace("000", "")) + 1;
       nextCode = currentMaxNum;
     }
     const newSUB_CODE = `SUB${nextCode.toString().padStart(3, "0")}`;

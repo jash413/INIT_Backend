@@ -31,35 +31,33 @@ const Employee = function (employee) {
 
 Employee.create = async (newEmployee) => {
   try {
-    // Fetch the SUB_STDT and SUB_ENDT for the given SUB_CODE
+    // Trim and clean mobile number
+    if (newEmployee.MOB_NMBR) {
+      newEmployee.MOB_NMBR = newEmployee.MOB_NMBR.replace(/\s+/g, "").trim();
+    }
+
+    // Rest of the function remains the same
     const [subscription] = await db.query(
       "SELECT SUB_STDT, SUB_ENDT FROM SUB_MAST WHERE SUB_CODE = ?",
       [newEmployee.SUB_CODE]
     );
-
     if (subscription.length === 0) {
       throw new Error("Subscription code not found");
     }
-
-    // Update the newEmployee object with the subscription dates
     newEmployee.SUB_STDT = subscription[0].SUB_STDT;
     newEmployee.SUB_ENDT = subscription[0].SUB_ENDT;
 
-    // Fetch the last EMP_CODE and generate the next EMP_CODE
     const [lastEmp] = await db.query(
       "SELECT EMP_CODE FROM EMP_MAST ORDER BY EMP_CODE DESC LIMIT 1"
     );
-    let nextEmpCode = "E000001"; // Default if no employees exist
-
+    let nextEmpCode = "E000001";
     if (lastEmp.length > 0) {
       const lastEmpCode = lastEmp[0].EMP_CODE;
-      const numericPart = parseInt(lastEmpCode.substring(1)) + 1; // Extract numeric part and increment
-      nextEmpCode = `E${numericPart.toString().padStart(5, "0")}`; // Generate next EMP_CODE with 6 digits (1 letter + 5 digits)
+      const numericPart = parseInt(lastEmpCode.substring(1)) + 1;
+      nextEmpCode = `E${numericPart.toString().padStart(5, "0")}`;
     }
-    // Add the generated EMP_CODE to newEmployee object
     newEmployee.EMP_CODE = nextEmpCode;
 
-    // Convert all string and char fields in newEmployee to uppercase
     for (const key in newEmployee) {
       if (
         typeof newEmployee[key] === "string" &&
@@ -69,7 +67,6 @@ Employee.create = async (newEmployee) => {
       }
     }
 
-    // Insert the new employee with the generated EMP_CODE
     const [res] = await db.query("INSERT INTO EMP_MAST SET ?", newEmployee);
     return { id: res.insertId, ...newEmployee };
   } catch (err) {
@@ -203,21 +200,22 @@ Employee.updateById = async (currentMobileNumber, employee) => {
     const values = [];
     let newMobileNumber = null;
 
+    // Trim and clean the current mobile number once
+    currentMobileNumber = currentMobileNumber.replace(/\s+/g, "").trim();
+
     for (const [key, value] of Object.entries(employee)) {
       if (key === "ad_id") continue;
 
-      // Check if mobile number is being updated
       if (key.toUpperCase() === "MOB_NMBR") {
-        newMobileNumber = value.toUpperCase();
-        continue; // Skip adding this to setParts for now
+        // Trim and clean the new mobile number
+        newMobileNumber = value.replace(/\s+/g, "").trim().toUpperCase();
+        continue;
       }
 
-      // Convert all string and char fields to uppercase
       if (typeof value === "string" && value.constructor === String) {
         employee[key] = value.toUpperCase();
       }
 
-      // Handle datetime fields
       if (
         typeof value === "string" &&
         value.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z$/)
@@ -239,30 +237,23 @@ Employee.updateById = async (currentMobileNumber, employee) => {
     }
 
     let result;
-
     if (newMobileNumber) {
-      // If mobile number is being updated, perform a separate update
       const mobileUpdateQuery = `UPDATE EMP_MAST SET MOB_NMBR = ? WHERE MOB_NMBR = ?`;
       [result] = await db.query(mobileUpdateQuery, [
         newMobileNumber,
         currentMobileNumber,
       ]);
-
       if (result.affectedRows === 0) {
         throw new Error("Employee not found");
       }
-
-      // Update the currentMobileNumber for subsequent operations
       currentMobileNumber = newMobileNumber;
     }
 
     if (setParts.length > 0) {
-      // Update other fields if there are any
       const setClause = setParts.join(", ");
       values.push(currentMobileNumber);
       const sqlQuery = `UPDATE EMP_MAST SET ${setClause} WHERE MOB_NMBR = ?`;
       [result] = await db.query(sqlQuery, values);
-
       if (result.affectedRows === 0) {
         throw new Error("Employee not found");
       }
