@@ -206,18 +206,6 @@ Employee.updateById = async (currentMobileNumber, employee) => {
     for (const [key, value] of Object.entries(employee)) {
       if (key === "ad_id") continue;
 
-      if (key.toUpperCase() === "SUB_CODE") {
-        const [subscription] = await db.query(
-          "SELECT SUB_STDT, SUB_ENDT FROM SUB_MAST WHERE SUB_CODE = ?",
-          [value]
-        );
-        if (subscription.length === 0) {
-          throw new Error("Subscription code not found");
-        }
-        employee.SUB_STDT = subscription[0].SUB_STDT;
-        employee.SUB_ENDT = subscription[0].SUB_ENDT;
-      }
-
       if (key.toUpperCase() === "MOB_NMBR") {
         // Trim and clean the new mobile number
         newMobileNumber = value.replace(/\s+/g, "").trim().toUpperCase();
