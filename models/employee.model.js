@@ -231,19 +231,6 @@ Employee.updateById = async (currentMobileNumber, employee) => {
       }
     }
 
-    const [subscription] = await db.query(
-      "SELECT SUB_STDT, SUB_ENDT FROM SUB_MAST WHERE SUB_CODE = ?",
-      [employee.SUB_CODE]
-    );
-    if (subscription.length === 0) {
-      throw new Error("Subscription code not found");
-    }
-    
-    setParts.push("SUB_STDT = ?");
-    values.push(subscription[0].SUB_STDT);
-    setParts.push("SUB_ENDT = ?");
-    values.push(subscription[0].SUB_ENDT);
-
     if (setParts.length === 0 && !newMobileNumber) {
       throw new Error("No fields to update");
     }
