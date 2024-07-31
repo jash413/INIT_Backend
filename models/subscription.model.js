@@ -97,6 +97,7 @@ Subscription.create = async (newSubscription) => {
   }
 };
 
+
 // Find Subscription by id
 Subscription.findById = async (subId) => {
   try {
@@ -327,14 +328,11 @@ Subscription.getAll = async (
 
     // Handle search
     if (search) {
-      const searchCondition = `
-        (
-          CONCAT_WS('', SUB_MAST.SUB_CODE, SUB_MAST.CUS_CODE, SUB_MAST.PLA_CODE, SUB_MAST.SUB_ORDN) LIKE ?
-          OR CUS_MAST.CUS_NAME LIKE ?
-        )`;
+      const searchCondition =
+        "CONCAT_WS('', SUB_MAST.SUB_CODE, SUB_MAST.CUS_CODE, SUB_MAST.PLA_CODE, SUB_MAST.SUB_ORDN) LIKE ?";
       conditions.push(searchCondition);
-      params.push(`%${search}%`, `%${search}%`);
-      countParams.push(`%${search}%`, `%${search}%`);
+      params.push(`%${search}%`);
+      countParams.push(`%${search}%`);
     }
 
     // Handle filters
@@ -401,5 +399,6 @@ Subscription.getAll = async (
     throw err;
   }
 };
+
 
 module.exports = Subscription;
