@@ -221,7 +221,6 @@ Employee.updateById = async (currentMobileNumber, employee) => {
         value.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z$/)
       ) {
         const formattedDate = new Date(value)
-          .toISOString()
           .replace("T", " ")
           .replace(/\.\d{3}Z$/, "");
         setParts.push(`${key.toUpperCase()} = ?`);
