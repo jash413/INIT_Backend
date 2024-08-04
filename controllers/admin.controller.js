@@ -41,7 +41,11 @@ exports.sendAdminOTP = async (req, res) => {
 
     // Generate JWT token
     const token = jwt.sign(
-      { id: adminUser.ad_id, phone: adminUser.ad_phone },
+      {
+        id: adminUser.ad_id,
+        phone: adminUser.ad_phone,
+        name: adminUser.ad_name,
+      },
       process.env.JWT_SECRET,
       { expiresIn: "1h" }
     );
@@ -67,7 +71,7 @@ exports.Login = async (req, res) => {
     return res.status(500).json(response.error("Internal server error"));
   }
 
-try {
+  try {
     const admin = await Admin.findByEmail(ad_email);
     if (!admin) {
       return res.status(404).json(response.error("Admin not found"));
@@ -78,9 +82,13 @@ try {
       return res.status(401).json(response.error("Invalid Password!"));
     }
 
-    const token = jwt.sign({ id: admin.ad_id }, process.env.JWT_SECRET, {
-      expiresIn: 259200, // 3 days in seconds (3 * 24 * 60 * 60)
-    });
+    const token = jwt.sign(
+      { id: admin.ad_id, name: admin.ad_name },
+      process.env.JWT_SECRET,
+      {
+        expiresIn: 259200, // 3 days in seconds (3 * 24 * 60 * 60)
+      }
+    );
 
     res.json(
       response.success("Admin logged in successfully", {
