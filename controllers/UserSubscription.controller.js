@@ -1,7 +1,6 @@
 const USRSubs = require("../models/UserSubscription.model.js");
 const response = require("../utils/response.js");
 const moment = require("moment");
-const axios = require("axios");
 
 
 

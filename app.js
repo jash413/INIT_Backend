@@ -28,6 +28,7 @@ const subscriptionRoutes = require("./routes/subscription.routes");
 const subplanroutes = require("./routes/subplan.routes");
 const gstRegistrationsroutes = require("./routes/gstRegistration.routes");
 const UserSubscriptionroutes = require("./routes/UserSubscription.routes"); 
+const UserMasterroutes = require("./routes/userMaster.routes");
 
 // Use routes
 app.use("/api/admins", adminRoutes);
@@ -37,6 +38,7 @@ app.use("/api/subscriptions", subscriptionRoutes);
 app.use("/api/sub-plans", subplanroutes);
 app.use("/api/gstRegistrations", gstRegistrationsroutes);
 app.use("/api/UserSubscription", UserSubscriptionroutes);
+app.use("/api/UserMaster", UserMasterroutes);
 
 // Default route
 app.get("/", (req, res) => {
