@@ -69,26 +69,102 @@ UsrMast.remove = async (id) => {
   }
 };
 
-UsrMast.getAll = async () => {
+UsrMast.getAll = async (
+  limit,
+  offset,
+  sort,
+  order,
+  search,
+  filter_from,
+  filter_to
+) => {
   try {
-    const [result] = await db.query(
-      "SELECT id, GST_CODE, GST_NMBR, USR_ID, USR_PASS, CLIENT_ID, CLIENT_SECRET, USR_ACTV, CREATED_ON, CREATED_BY, MODIFY_ON, MODIFY_BY, is_admin, last_login, sandbox_access FROM USR_MAST"
-    );
+    let query = `SELECT id, GST_CODE, GST_NMBR, USR_ID, USR_PASS, CLIENT_ID, CLIENT_SECRET, USR_ACTV, CREATED_ON, CREATED_BY, MODIFY_ON, MODIFY_BY, is_admin, last_login, sandbox_access FROM USR_MAST`;
+    let countQuery = `SELECT COUNT(*) as total FROM USR_MAST`;
+    let params = [];
+    let countParams = [];
+    const conditions = [];
 
-    // Convert Buffer objects to integer values for each row
-    const formattedResult = result.map((row) => ({
+    // Handle search
+    if (search) {
+      const searchCondition = `(
+        GST_CODE LIKE ? OR
+        GST_NMBR LIKE ? OR
+        USR_ID LIKE ? OR
+        CLIENT_ID LIKE ? OR
+        ID LIKE ?
+      )`;
+      conditions.push(searchCondition);
+      const searchValue = `%${search}%`;
+      params.push(searchValue, searchValue, searchValue, searchValue,searchValue );
+      countParams.push(searchValue, searchValue, searchValue, searchValue,searchValue);
+    }
+
+    // Handle filters
+    if (filter_from) {
+      conditions.push(`CREATED_ON >= ?`);
+      params.push(filter_from);
+      countParams.push(filter_from);
+    }
+    if (filter_to) {
+      conditions.push(`CREATED_ON <= ?`);
+      params.push(`${filter_to} 23:59:59`);
+      countParams.push(`${filter_to} 23:59:59`);
+    }
+
+    if (conditions.length > 0) {
+      const conditionString = conditions.join(" AND ");
+      query += ` WHERE ${conditionString}`;
+      countQuery += ` WHERE ${conditionString}`;
+    }
+
+    // Handle sorting
+    const validSortFields = [
+      "GST_CODE",
+      "GST_NMBR",
+      "USR_ID",
+      "CLIENT_ID",
+      "CREATED_ON",
+    ];
+    if (sort && validSortFields.includes(sort.toUpperCase())) {
+      query += ` ORDER BY ${sort.toUpperCase()} ${
+        order.toUpperCase() === "DESC" ? "DESC" : "ASC"
+      }`;
+    } else {
+      query += " ORDER BY CREATED_ON DESC"; // default sorting
+    }
+
+    // Execute count query first to get total count
+    const [countResult] = await db.query(countQuery, countParams);
+    const totalCount = countResult[0]?.total || 0;
+
+    // Handle pagination limit
+    if (limit === 0) {
+      limit = totalCount; // Set limit to total count if limit is 0
+    }
+
+    // Execute main query with limit and offset
+    query += " LIMIT ? OFFSET ?";
+    params.push(parseInt(limit), parseInt(offset));
+
+    const [users = []] = await db.query(query, params);
+
+    // Convert Buffer objects to integer values for the boolean fields
+    const formattedResult = users.map((row) => ({
       ...row,
-      USR_ACTV: row.USR_ACTV[0],
-      is_admin: row.is_admin[0],
-      sandbox_access: row.sandbox_access[0],
+      USR_ACTV: row.USR_ACTV ? row.USR_ACTV[0] : 0,
+      is_admin: row.is_admin ? row.is_admin[0] : 0,
+      sandbox_access: row.sandbox_access ? row.sandbox_access[0] : 0,
     }));
 
-    return formattedResult;
+    return [formattedResult, totalCount];
   } catch (err) {
-    console.error("Error retrieving GST registrations:", err);
+    console.error("Error retrieving users:", err);
     throw err;
   }
 };
+
+
 
 
 module.exports = UsrMast;
