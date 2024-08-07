@@ -42,17 +42,95 @@ USRSubs.findById = async (id) => {
   }
 };
 
-USRSubs.getAll = async () => {
+USRSubs.getAll = async (
+  limit,
+  offset,
+  sort,
+  order,
+  search,
+  filter_user_id,
+  filter_from,
+  filter_to
+) => {
   try {
-    const [result] = await db.query("SELECT * FROM USR_SUBS");
+    let query = "SELECT * FROM USR_SUBS";
+    let countQuery = "SELECT COUNT(*) as total FROM USR_SUBS";
+    let params = [];
+    let countParams = [];
+    const conditions = [];
+
+    if (search) {
+      const searchCondition =
+        "CONCAT_WS('', GST_CODE, GST_NMBR, SYSTEM_ID, SUBSCRIPTION_ID,created_by) LIKE ?";
+      conditions.push(searchCondition);
+      params.push(`%${search}%`);
+      countParams.push(`%${search}%`);
+    }
+
+    if (filter_user_id) {
+      conditions.push("user_id = ?");
+      params.push(filter_user_id);
+      countParams.push(filter_user_id);
+    }
+
+    if (filter_from) {
+      conditions.push("created_on >= ?");
+      params.push(filter_from);
+      countParams.push(filter_from);
+    }
+
+    if (filter_to) {
+      conditions.push("created_on <= ?");
+      params.push(`${filter_to} 23:59:59`);
+      countParams.push(`${filter_to} 23:59:59`);
+    }
+
+    if (conditions.length > 0) {
+      const conditionString = conditions.join(" AND ");
+      query += ` WHERE ${conditionString}`;
+      countQuery += ` WHERE ${conditionString}`;
+    }
+
+    const validSortFields = [
+      "GST_CODE",
+      "SYSTEM_ID",
+      "SUBSCRIPTION_ID",
+      "SUBSCRIPTION_DATE",
+      "ALLOTED_CALLS",
+      "USED_CALLS",
+      "PENDING_CALLS",
+      "is_active",
+      "created_on",
+      "expiry_date",
+    ];
+
+    if (sort && validSortFields.includes(sort.toUpperCase())) {
+      query += ` ORDER BY ${sort.toUpperCase()} ${
+        order.toUpperCase() === "DESC" ? "DESC" : "ASC"
+      }`;
+    } else {
+      query += " ORDER BY created_on DESC";
+    }
+
+    const [countResult] = await db.query(countQuery, countParams);
+    const totalCount = countResult[0].total;
+
+    if (limit === 0) {
+      limit = totalCount;
+    }
+
+    query += " LIMIT ? OFFSET ?";
+    params.push(parseInt(limit), parseInt(offset));
+
+    const [usrSubs] = await db.query(query, params);
 
     // Convert Buffer objects to integer values for the is_active field
-    const formattedResult = result.map((row) => ({
+    const formattedUsrSubs = usrSubs.map((row) => ({
       ...row,
       is_active: row.is_active[0],
     }));
 
-    return formattedResult;
+    return [formattedUsrSubs, totalCount];
   } catch (err) {
     console.error("Error retrieving user subscriptions:", err);
     throw err;
