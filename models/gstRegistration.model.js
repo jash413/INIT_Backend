@@ -7,6 +7,7 @@ const GstRegistration = function (gstRegistration) {
   this.CUS_ADDR = gstRegistration.CUS_ADDR;
   this.CMP_NAME = gstRegistration.CMP_NAME;
   this.notification_date = gstRegistration.notification_date;
+  this.CREATED_BY = gstRegistration.CREATED_BY;
 };
 
 GstRegistration.create = async (newGstRegistration) => {

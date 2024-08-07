@@ -13,6 +13,7 @@ exports.create = async (req, res) => {
 
     const formatMomentDate = (date) =>
       date ? moment(date).format("YYYY-MM-DD HH:mm:ss") : null;
+    const createdBy = req.user ? req.user.name : "Unknown";
 
     const gstRegistration = new GstRegistration({
       REG_CODE: req.body.REG_CODE,
@@ -20,6 +21,7 @@ exports.create = async (req, res) => {
       CUS_ADDR: req.body.CUS_ADDR,
       CMP_NAME: req.body.CMP_NAME,
       notification_date: formatMomentDate(req.body.notification_date),
+      CREATED_BY: createdBy,
     });
 
     const data = await GstRegistration.create(gstRegistration);
