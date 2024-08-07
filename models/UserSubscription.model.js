@@ -45,12 +45,20 @@ USRSubs.findById = async (id) => {
 USRSubs.getAll = async () => {
   try {
     const [result] = await db.query("SELECT * FROM USR_SUBS");
-    return result;
+
+    // Convert Buffer objects to integer values for the is_active field
+    const formattedResult = result.map((row) => ({
+      ...row,
+      is_active: row.is_active[0],
+    }));
+
+    return formattedResult;
   } catch (err) {
     console.error("Error retrieving user subscriptions:", err);
     throw err;
   }
 };
+
 
 USRSubs.updateById = async (id, usrSubs) => {
   try {

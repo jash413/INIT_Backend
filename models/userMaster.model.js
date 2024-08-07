@@ -71,12 +71,24 @@ UsrMast.remove = async (id) => {
 
 UsrMast.getAll = async () => {
   try {
-    const [result] = await db.query("SELECT * FROM USR_MAST");
-    return result;
+    const [result] = await db.query(
+      "SELECT id, GST_CODE, GST_NMBR, USR_ID, USR_PASS, CLIENT_ID, CLIENT_SECRET, USR_ACTV, CREATED_ON, CREATED_BY, MODIFY_ON, MODIFY_BY, is_admin, last_login, sandbox_access FROM USR_MAST"
+    );
+
+    // Convert Buffer objects to integer values for each row
+    const formattedResult = result.map((row) => ({
+      ...row,
+      USR_ACTV: row.USR_ACTV[0],
+      is_admin: row.is_admin[0],
+      sandbox_access: row.sandbox_access[0],
+    }));
+
+    return formattedResult;
   } catch (err) {
-    console.error("Error retrieving users:", err);
+    console.error("Error retrieving GST registrations:", err);
     throw err;
   }
 };
+
 
 module.exports = UsrMast;

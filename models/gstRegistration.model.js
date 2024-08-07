@@ -115,14 +115,96 @@ GstRegistration.remove = async (id) => {
   }
 };
 
-GstRegistration.getAll = async () => {
+GstRegistration.getAll = async (
+  limit,
+  offset,
+  sort,
+  order,
+  search,
+  filter_from,
+  filter_to
+) => {
   try {
-    const [result] = await db.query("SELECT * FROM gst_registration");
-    return result;
+    let query = `SELECT * FROM gst_registration`;
+    let countQuery = `SELECT COUNT(*) as total FROM gst_registration`;
+    let params = [];
+    let countParams = [];
+
+    const conditions = [];
+
+    // Handle search
+    if (search) {
+      const searchCondition = `(
+        REG_CODE LIKE ? OR 
+        CUS_NAME LIKE ? OR 
+        CMP_NAME LIKE ? OR
+        id LIKE ?
+      )`;
+      conditions.push(searchCondition);
+      const searchValue = `%${search}%`;
+      params.push(searchValue, searchValue, searchValue, searchValue);
+      countParams.push(searchValue, searchValue, searchValue, searchValue);
+    }
+
+    // Handle filters
+    if (filter_from) {
+      conditions.push(`created_at >= ?`);
+      params.push(filter_from);
+      countParams.push(filter_from);
+    }
+    if (filter_to) {
+      conditions.push(`created_at <= ?`);
+      params.push(`${filter_to} 23:59:59`);
+      countParams.push(`${filter_to} 23:59:59`);
+    }
+
+    if (conditions.length > 0) {
+      const conditionString = conditions.join(" AND ");
+      query += ` WHERE ${conditionString}`;
+      countQuery += ` WHERE ${conditionString}`;
+    }
+
+    // Handle sorting
+    const validSortFields = ["REG_CODE", "CUS_NAME", "CMP_NAME", "created_at"];
+    if (sort && validSortFields.includes(sort.toUpperCase())) {
+      query += ` ORDER BY ${sort.toUpperCase()} ${
+        order.toUpperCase() === "DESC" ? "DESC" : "ASC"
+      }`;
+    } else {
+      query += " ORDER BY created_at DESC"; // default sorting
+    }
+
+    // Execute count query first to get total count
+    const [countResult] = await db.query(countQuery, countParams);
+    const totalCount = countResult[0]?.total || 0;
+
+    // Handle pagination limit
+    if (limit === 0) {
+      limit = totalCount; // Set limit to total count if limit is 0
+    }
+
+    // Execute main query with limit and offset
+    query += " LIMIT ? OFFSET ?";
+    params.push(parseInt(limit), parseInt(offset));
+
+    const [gstRegistrations = []] = await db.query(query, params);
+
+    // Convert Buffer objects to integer values for the is_active field
+    const formattedResult = gstRegistrations.map((row) => ({
+      ...row,
+      USR_ACTV: row.USR_ACTV ? row.USR_ACTV[0] : 0, // Safe access
+      is_admin: row.is_admin ? row.is_admin[0] : 0, // Safe access
+      sandbox_access: row.sandbox_access ? row.sandbox_access[0] : 0, // Safe access
+    }));
+
+    return [formattedResult, totalCount];
   } catch (err) {
     console.error("Error retrieving GST registrations:", err);
     throw err;
   }
 };
+
+
+
 
 module.exports = GstRegistration;
