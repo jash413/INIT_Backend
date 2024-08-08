@@ -282,15 +282,24 @@ exports.findOne = async (req, res) => {
 
 exports.update = async (req, res) => {
   try {
-    if (!req.body) {
+    if (!req.body || Object.keys(req.body).length === 0) {
       return res
         .status(400)
         .json(response.badRequest("Data to update can't be empty!"));
     }
 
+    // Remove created_at from req.body if it exists to let the database handle it as default
+    if (req.body.created_at) {
+      delete req.body.created_at;
+    }
+
     const data = await GstRegistration.updateById(req.params.id, req.body);
 
-    if (!data) {
+    res
+      .status(200)
+      .json(response.success("GST registration updated successfully", data));
+  } catch (err) {
+    if (err.message === "GST registration not found") {
       return res
         .status(404)
         .json(
@@ -299,11 +308,10 @@ exports.update = async (req, res) => {
           )
         );
     }
-
-    res
-      .status(200)
-      .json(response.success("GST registration updated successfully", data));
-  } catch (err) {
+    console.error(
+      `Error updating GST registration with id ${req.params.id}`,
+      err
+    );
     res
       .status(500)
       .json(
@@ -313,6 +321,7 @@ exports.update = async (req, res) => {
       );
   }
 };
+
 exports.delete = async (req, res) => {
   try {
     await GstRegistration.remove(req.params.id);

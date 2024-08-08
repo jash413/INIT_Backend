@@ -166,7 +166,7 @@ GstRegistration.getAll = async (
     }
 
     // Handle sorting
-    const validSortFields = ["REG_CODE", "CUS_NAME", "CMP_NAME", "created_at"];
+    const validSortFields = ["REG_CODE", "CUS_NAME", "CMP_NAME", "created_at","ID"];
     if (sort && validSortFields.includes(sort.toUpperCase())) {
       query += ` ORDER BY ${sort.toUpperCase()} ${
         order.toUpperCase() === "DESC" ? "DESC" : "ASC"

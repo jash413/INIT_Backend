@@ -1,6 +1,20 @@
 const UsrMast = require("../models/userMaster.model");
 const response = require("../utils/response.js");
 const moment = require("moment");
+const crypto = require('crypto');
+const encryptionKeyHex =
+  "de450fbc4b63c8097181367b09607d78de450fbc4b63c8097181367b09607d78";
+const encryptionKey = Buffer.from(encryptionKeyHex, "hex");
+
+function encrypt(text) {
+  const algorithm = "aes-256-cbc";
+  const iv = crypto.randomBytes(16);
+  const cipher = crypto.createCipheriv(algorithm, encryptionKey, iv);
+
+  let encrypted = cipher.update(text, "utf8", "hex");
+  encrypted += cipher.final("hex");
+  return iv.toString("hex") + ":" + encrypted;
+}
 
 exports.create = async (req, res) => {
   try {
@@ -12,25 +26,38 @@ exports.create = async (req, res) => {
 
     const formatMomentDate = (date) =>
       date ? moment(date).format("YYYY-MM-DD HH:mm:ss") : null;
-
     const currentDate = moment().format("YYYY-MM-DD HH:mm:ss");
 
-    // Ensure CREATED_BY is set
-    const createdBy = req.user ? req.user.name : "Unknown"; // Adjust this based on your authentication setup
+    const createdBy = req.user ? req.user.name : "Unknown";
 
-    if (!createdBy) {
+    // Generate client_id and client_secret
+    const currentTime = Date.now().toString();
+    const clientId = crypto.createHash("md5").update(currentTime).digest("hex");
+    const clientSecret = crypto
+      .createHash("sha1")
+      .update(currentTime)
+      .digest("hex");
+    // console.log("clientid", clientId);
+    // console.log("clientsecret", clientSecret);
+
+    let encryptedPassword;
+    try {
+      encryptedPassword = encrypt(req.body.USR_PASS);
+    } catch (encryptError) {
+      console.error("Encryption error:", encryptError);
       return res
-        .status(400)
-        .json(response.badRequest("Creator information is missing"));
+        .status(500)
+        .json(response.error("Error encrypting sensitive data"));
     }
+    // console.log("encrypted Password", encryptedPassword);
 
     const usrMast = new UsrMast({
       GST_CODE: req.body.GST_CODE,
       GST_NMBR: req.body.GST_NMBR,
       USR_ID: req.body.USR_ID,
-      USR_PASS: req.body.USR_PASS,
-      CLIENT_ID: req.body.CLIENT_ID,
-      CLIENT_SECRET: req.body.CLIENT_SECRET,
+      USR_PASS: encryptedPassword,
+      CLIENT_ID: clientId,
+      CLIENT_SECRET: clientSecret,
       USR_ACTV: req.body.USR_ACTV,
       CREATED_ON: currentDate,
       CREATED_BY: createdBy,
@@ -40,11 +67,20 @@ exports.create = async (req, res) => {
       last_login: formatMomentDate(req.body.last_login),
       sandbox_access: 0,
     });
+
     console.log("user data", req.user);
     const data = await UsrMast.create(usrMast);
 
-    res.status(201).json(response.success("User created successfully", data));
+    // Remove sensitive information from the response
+    const responseData = { ...data };
+    delete responseData.USR_PASS;
+    delete responseData.CLIENT_SECRET;
+
+    res
+      .status(201)
+      .json(response.success("User created successfully", responseData));
   } catch (err) {
+    console.error("Error in create function:", err);
     res
       .status(500)
       .json(

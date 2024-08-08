@@ -102,6 +102,7 @@ USRSubs.getAll = async (
       "is_active",
       "created_on",
       "expiry_date",
+      "ID"
     ];
 
     if (sort && validSortFields.includes(sort.toUpperCase())) {

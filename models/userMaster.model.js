@@ -125,6 +125,7 @@ UsrMast.getAll = async (
       "USR_ID",
       "CLIENT_ID",
       "CREATED_ON",
+      "ID"
     ];
     if (sort && validSortFields.includes(sort.toUpperCase())) {
       query += ` ORDER BY ${sort.toUpperCase()} ${
