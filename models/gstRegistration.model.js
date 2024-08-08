@@ -99,23 +99,6 @@ GstRegistration.updateById = async (id, gstRegistration) => {
   }
 };
 
-GstRegistration.remove = async (id) => {
-  try {
-    const [res] = await db.query(
-      "DELETE FROM gst_registration WHERE id = ?",
-      id
-    );
-    if (res.affectedRows == 0) {
-      throw new Error("GST registration not found");
-    }
-    console.log("Deleted GST registration with id: ", id);
-    return res;
-  } catch (err) {
-    console.error("Error deleting GST registration:", err);
-    throw err;
-  }
-};
-
 GstRegistration.getAll = async (
   limit,
   offset,
@@ -204,6 +187,69 @@ GstRegistration.getAll = async (
     throw err;
   }
 };
+
+GstRegistration.checkForMatches = async (regCode) => {
+  try {
+    // Check in user_master table
+    const [userMasterResult] = await db.query(
+      "SELECT COUNT(*) as count FROM USR_MAST WHERE GST_CODE = ?",
+      [regCode]
+    );
+
+    // Check in usr_subs table
+    const [userSubsResult] = await db.query(
+      "SELECT COUNT(*) as count FROM USR_SUBS WHERE GST_CODE = ?",
+      [regCode]
+    );
+
+    const userMasterCount = userMasterResult[0].count;
+    const userSubsCount = userSubsResult[0].count;
+
+    return {
+      inUserMaster: userMasterCount > 0,
+      inUserSubs: userSubsCount > 0,
+    };
+  } catch (err) {
+    console.error("Error checking for matches:", err);
+    throw err;
+  }
+};
+
+GstRegistration.getRegCodeById = async (id) => {
+  try {
+    const [result] = await db.query(
+      "SELECT REG_CODE FROM gst_registration WHERE id = ?",
+      [id]
+    );
+
+    if (result.length === 0) {
+      throw new Error("GST registration not found");
+    }
+
+    return result[0].REG_CODE;
+  } catch (err) {
+    console.error("Error fetching REG_CODE:", err);
+    throw err;
+  }
+};
+
+GstRegistration.remove = async (id) => {
+  try {
+    const [res] = await db.query(
+      "DELETE FROM gst_registration WHERE id = ?",
+      [id] // Pass the id as an array element
+    );
+    if (res.affectedRows === 0) {
+      throw new Error("GST registration not found");
+    }
+    console.log("Deleted GST registration with id: ", id);
+    return res;
+  } catch (err) {
+    console.error("Error deleting GST registration:", err);
+    throw err;
+  }
+};
+
 
 
 

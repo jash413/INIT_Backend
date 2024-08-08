@@ -288,7 +288,7 @@ const isValidDate = (dateString) => {
 
 exports.findOne = async (req, res) => {
   try {
-    const data = await UsrMast.findById(req.params.id);
+    const data = await UsrMast.findByIdOrGstCode(req.params.id);
 
     if (!data) {
       return res
@@ -334,11 +334,21 @@ exports.update = async (req, res) => {
 
 exports.delete = async (req, res) => {
   try {
-    await UsrMast.remove(req.params.id);
-    res.status(200).json(response.success("User was deleted successfully!"));
+    const userId = req.params.id;
+    const result = await UsrMast.remove(userId);
+
+    if (!result.success) {
+      return res.status(400).json(response.error(result.message));
+    }
+
+    res.status(200).json(response.success(result.message));
   } catch (err) {
     res
       .status(500)
-      .json(response.error(`Could not delete user with id ${req.params.id}`));
+      .json(
+        response.error(
+          err.message || `Could not delete user with id ${req.params.id}`
+        )
+      );
   }
 };

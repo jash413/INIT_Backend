@@ -155,6 +155,19 @@ USRSubs.updateById = async (id, usrSubs) => {
   }
 };
 
+USRSubs.getNextSubscriptionId = async () => {
+  try {
+    const [result] = await db.query(
+      "SELECT MAX(SUBSCRIPTION_ID) as maxId FROM USR_SUBS"
+    );
+    const maxId = result[0].maxId || 0;
+    return maxId + 1;
+  } catch (err) {
+    console.error("Error getting next subscription ID:", err);
+    throw err;
+  }
+};
+
 
 USRSubs.remove = async (id) => {
   try {

@@ -324,11 +324,58 @@ exports.update = async (req, res) => {
 
 exports.delete = async (req, res) => {
   try {
-    await GstRegistration.remove(req.params.id);
-    res.send({ message: "GST registration was deleted successfully!" });
+    const id = req.params.id;
+
+    // Fetch regCode using id
+    const regCode = await GstRegistration.getRegCodeById(id);
+
+    // Check for matches before deleting
+    const matches = await GstRegistration.checkForMatches(regCode);
+
+    if (matches.inUserMaster && matches.inUserSubs) {
+      return res
+        .status(400)
+        .json(
+          response.error(
+            "Cannot delete GST registration. It is associated with both user(s) in User Master and subscription(s) in User Subscriptions."
+          )
+        );
+    } else if (matches.inUserMaster) {
+      return res
+        .status(400)
+        .json(
+          response.error(
+            "Cannot delete GST registration. It is associated with user(s) in User Master."
+          )
+        );
+    } else if (matches.inUserSubs) {
+      return res
+        .status(400)
+        .json(
+          response.error(
+            "Cannot delete GST registration. It is associated with subscription(s) in User Subscriptions."
+          )
+        );
+    }
+
+    // If no matches found, proceed with deletion
+    const result = await GstRegistration.remove(id);
+
+    if (result.affectedRows === 0) {
+      return res
+        .status(404)
+        .json(response.error(`GST Registration with id ${id} not found.`));
+    }
+
+    res.json(response.success("GST Registration deleted successfully."));
   } catch (err) {
-    res.status(500).send({
-      message: "Could not delete GST registration with id " + req.params.id,
-    });
+    res
+      .status(500)
+      .json(
+        response.error(
+          err.message ||
+            "Some error occurred while deleting the GST Registration."
+        )
+      );
   }
 };

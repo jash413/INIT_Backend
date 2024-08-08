@@ -15,6 +15,8 @@ exports.create = async (req, res) => {
     const formatMomentDate = (date) =>
       date ? moment(date).format("YYYY-MM-DD HH:mm:ss") : null;
 
+    const nextSubscriptionId = await USRSubs.getNextSubscriptionId();
+    // console.log("new sub id", nextSubscriptionId);
 
 
   
@@ -23,11 +25,11 @@ exports.create = async (req, res) => {
       GST_CODE: req.body.GST_CODE,
       GST_NMBR: req.body.GST_NMBR,
       SYSTEM_ID: req.body.SYSTEM_ID,
-      SUBSCRIPTION_ID: req.body.SUBSCRIPTION_ID,
+      SUBSCRIPTION_ID: nextSubscriptionId,
       SUBSCRIPTION_DATE: formatMomentDate(req.body.SUBSCRIPTION_DATE),
-      ALLOTED_CALLS: req.body.ALLOTED_CALLS,
-      USED_CALLS: req.body.USED_CALLS,
-      PENDING_CALLS: req.body.PENDING_CALLS,
+      ALLOTED_CALLS: 0,
+      USED_CALLS: 0,
+      PENDING_CALLS: 0,
       is_active: req.body.is_active,
       created_by: req.user.name,
       created_on: formatMomentDate(req.body.created_on),
@@ -307,7 +309,6 @@ exports.findOne = async (req, res) => {
 
 exports.update = async (req, res) => {
   try {
-    console.log("Request params:", req.params); // Add this line
     if (!req.body) {
       return res
         .status(400)

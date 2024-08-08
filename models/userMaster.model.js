@@ -27,14 +27,24 @@ UsrMast.create = async (newUsrMast) => {
   }
 };
 
-UsrMast.findById = async (id) => {
+UsrMast.findByIdOrGstCode = async (identifier) => {
   try {
-    const [result] = await db.query("SELECT * FROM USR_MAST WHERE id = ?", [
-      id,
-    ]);
+    let query;
+    let values;
+
+    // Check if the identifier is numeric (assuming id is numeric)
+    if (!isNaN(identifier)) {
+      query = "SELECT * FROM USR_MAST WHERE id = ?";
+      values = [identifier];
+    } else {
+      query = "SELECT * FROM USR_MAST WHERE GST_CODE = ?";
+      values = [identifier];
+    }
+
+    const [result] = await db.query(query, values);
     return result.length ? result[0] : null;
   } catch (err) {
-    console.error(`Error finding user by id ${id}:`, err);
+    console.error(`Error finding user by identifier ${identifier}:`, err);
     throw err;
   }
 };
@@ -51,20 +61,6 @@ UsrMast.updateById = async (id, usrMast) => {
     return { id: id, ...usrMast };
   } catch (err) {
     console.error("Error updating user:", err);
-    throw err;
-  }
-};
-
-UsrMast.remove = async (id) => {
-  try {
-    const [res] = await db.query("DELETE FROM USR_MAST WHERE id = ?", id);
-    if (res.affectedRows == 0) {
-      throw new Error("User not found");
-    }
-    console.log("Deleted user with id: ", id);
-    return res;
-  } catch (err) {
-    console.error("Error deleting user:", err);
     throw err;
   }
 };
@@ -161,6 +157,44 @@ UsrMast.getAll = async (
     return [formattedResult, totalCount];
   } catch (err) {
     console.error("Error retrieving users:", err);
+    throw err;
+  }
+};
+
+// Check if user ID is present in usr_subs table
+UsrMast.checkForAssociations = async (userId) => {
+  try {
+    const [result] = await db.query(
+      "SELECT COUNT(*) as count FROM USR_SUBS WHERE user_id = ?",
+      [userId]
+    );
+
+    const userSubsCount = result[0].count;
+
+    return userSubsCount > 0;
+  } catch (err) {
+    console.error("Error checking for associations:", err);
+    throw err;
+  }
+};
+
+UsrMast.remove = async (id) => {
+  try {
+    // Check if there are any associations before deleting
+    const hasAssociations = await UsrMast.checkForAssociations(id);
+
+    if (hasAssociations) {
+      return { success: false, message: "Cannot delete user. It is associated with subscription(s)." };
+    }
+
+    const [res] = await db.query("DELETE FROM USR_MAST WHERE id = ?", [id]);
+    if (res.affectedRows === 0) {
+      return { success: false, message: "User not found" };
+    }
+    console.log("Deleted user with id: ", id);
+    return { success: true, message: "User deleted successfully" };
+  } catch (err) {
+    console.error("Error deleting user:", err);
     throw err;
   }
 };
